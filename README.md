@@ -1,1 +1,1 @@
-# CareerCraft
+# career-craft
