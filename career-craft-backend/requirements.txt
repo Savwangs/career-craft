@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+python-jose
+passlib
+python-dotenv
+pydantic
+firebase-admin
+pytest
+httpx
+python-multipart
+alembic
