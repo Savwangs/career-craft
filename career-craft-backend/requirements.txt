@@ -11,3 +11,6 @@ pytest
 httpx
 python-multipart
 alembic
+docx2txt
+PyPDF
+spacy
