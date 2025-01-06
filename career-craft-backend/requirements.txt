@@ -14,3 +14,8 @@ alembic
 docx2txt
 PyPDF
 spacy
+docx2pdf
+PyPDF2
+python-docx
+pydantic[email]
+slowapi
