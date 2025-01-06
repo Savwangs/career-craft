@@ -8,8 +8,15 @@ import firebase_admin
 from firebase_admin import credentials, auth
 from .exceptions import DatabaseError
 import logging
+from docx import Document
+from docx2pdf import convert
+from tempfile import NamedTemporaryFile
+import openai
+from openai import OpenAI
 
 load_dotenv()
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 SECRET_KEY = os.getenv("JWT_SECRET")
 if not SECRET_KEY:
@@ -105,4 +112,38 @@ async def get_current_user(authorization: str = Header(None)):
             status_code=401,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+def convert_docx_to_pdf(doc: Document) -> bytes:
+    """
+    Converts a docx Document object to PDF bytes.
+    
+    Args:
+        doc (Document): python-docx Document object
+
+    Returns:
+        bytes: PDF file content
+    """
+    try:
+        # Create temporary files for conversion
+        with NamedTemporaryFile(suffix='.docx', delete=False) as docx_temp:
+            doc.save(docx_temp.name)
+            
+            with NamedTemporaryFile(suffix='.pdf', delete=False) as pdf_temp:
+                convert(docx_temp.name, pdf_temp.name)
+                
+                # Read PDF content
+                with open(pdf_temp.name, 'rb') as pdf_file:
+                    pdf_content = pdf_file.read()
+                    
+        # Clean up temporary files
+        os.unlink(docx_temp.name)
+        os.unlink(pdf_temp.name)
+        
+        return pdf_content
+    except Exception as e:
+        logging.error(f"PDF conversion failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to convert resume to PDF"
         )

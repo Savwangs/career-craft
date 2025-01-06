@@ -1,9 +1,11 @@
-from pydantic import BaseModel, validator
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, validator, EmailStr
 from typing import Optional, List
 from datetime import datetime
 import json
+from fastapi import UploadFile
+from enum import Enum
 
+# Existing schemas
 class UserBase(BaseModel):
     email: str
 
@@ -51,3 +53,68 @@ class PaginatedResponse(BaseModel):
     total: int
     page: int
     size: int
+
+# New schemas for resume generation
+class Experience(BaseModel):
+    title: str
+    company: str
+    start_date: str
+    end_date: str
+    responsibilities: Optional[List[str]] = []
+
+class Education(BaseModel):
+    degree: str
+    field: str
+    school: str
+    graduation_date: str
+
+class ResumeGenerationRequest(BaseModel):
+    full_name: str
+    email: str
+    phone: str
+    location: str
+    summary: str
+    experience: List[Experience]
+    education: List[Education]
+    skills: Optional[List[str]] = []
+
+class ResumeSource(str, Enum):
+    UPLOAD = "upload"
+    MANUAL = "manual"
+
+class ParsedResume(BaseModel):
+    full_name: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]
+    location: Optional[str]
+    summary: Optional[str]
+    experience: Optional[List[Experience]]
+    education: Optional[List[Education]]
+    skills: Optional[List[str]]
+    
+    class Config:
+        orm_mode = True
+
+class ResumeUploadResponse(BaseModel):
+    message: str
+    parsed_data: ParsedResume
+
+class KeywordAlignment(BaseModel):
+    missing_keywords: List[str]
+    suggestions: List[str]
+
+class AchievementImprovement(BaseModel):
+    section: str
+    current: str
+    suggested: str
+
+class SkillsFeedback(BaseModel):
+    relevant_skills: List[str]
+    missing_skills: List[str]
+    suggestions: List[str]
+
+class ResumeAnalysis(BaseModel):
+    keyword_alignment: KeywordAlignment
+    achievement_improvements: List[AchievementImprovement]
+    skills_feedback: SkillsFeedback
+    overall_recommendations: List[str]
