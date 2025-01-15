@@ -19,3 +19,6 @@ PyPDF2
 python-docx
 pydantic[email]
 slowapi
+openai
+python-docx2pdf
+pathlib
