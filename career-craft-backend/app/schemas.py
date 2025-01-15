@@ -1,9 +1,10 @@
-from pydantic import BaseModel, validator, EmailStr
+from pydantic import BaseModel, validator, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 import json
 from fastapi import UploadFile
 from enum import Enum
+from typing import Dict, List, Any
 
 # Existing schemas
 class UserBase(BaseModel):
@@ -59,8 +60,8 @@ class Experience(BaseModel):
     title: str
     company: str
     start_date: str
-    end_date: str
-    responsibilities: Optional[List[str]] = []
+    end_date: Optional[str]
+    responsibilities: List[str]
 
 class Education(BaseModel):
     degree: str
@@ -69,14 +70,18 @@ class Education(BaseModel):
     graduation_date: str
 
 class ResumeGenerationRequest(BaseModel):
-    full_name: str
-    email: str
-    phone: str
-    location: str
-    summary: str
-    experience: List[Experience]
-    education: List[Education]
-    skills: Optional[List[str]] = []
+    #personal_info: Dict[str, str]
+    #summary: Optional[str] = None
+    #experience: List[Dict[str, Any]]
+    #education: List[Dict[str, Any]]
+    #skills: List[str]
+    #achievements: Optional[List[Dict[str, Any]]] = None
+    personal_info: dict = Field(..., description="Personal information including name, email, phone, location")
+    summary: str = Field(..., description="Professional summary")
+    experience: List[dict] = Field(..., description="List of work experiences")
+    education: List[dict] = Field(..., description="List of education entries")
+    skills: List[str] = Field(..., description="List of skills")
+    achievements: Optional[List[dict]] = Field(None, description="Optional list of achievements")
 
 class ResumeSource(str, Enum):
     UPLOAD = "upload"
@@ -98,6 +103,7 @@ class ParsedResume(BaseModel):
 class ResumeUploadResponse(BaseModel):
     message: str
     parsed_data: ParsedResume
+    feedback: List[str] = []
 
 class KeywordAlignment(BaseModel):
     missing_keywords: List[str]
@@ -118,3 +124,32 @@ class ResumeAnalysis(BaseModel):
     achievement_improvements: List[AchievementImprovement]
     skills_feedback: SkillsFeedback
     overall_recommendations: List[str]
+
+class Config:
+        schema_extra = {
+            "example": {
+                "personal_info": {
+                    "full_name": "John Doe",
+                    "email": "john@example.com",
+                    "phone": "123-456-7890",
+                    "location": "New York, NY"
+                },
+                "summary": "Experienced software engineer...",
+                "experience": [{
+                    "title": "Software Engineer",
+                    "company": "Tech Corp",
+                    "start_date": "2020-01",
+                    "end_date": "2023-01",
+                    "description": "Led development..."
+                }],
+                "education": [{
+                    "institution": "University Name",
+                    "degree": "Bachelor's in Computer Science",
+                    "graduation_date": "2020-05",
+                    "gpa": "3.8",
+                    "relevant_courses": []
+                }],
+                "skills": ["Python", "JavaScript", "React"],
+                "achievements": []
+            }
+        }
