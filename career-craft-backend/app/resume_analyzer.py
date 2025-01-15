@@ -10,18 +10,20 @@ class ResumeAnalyzer:
     def analyze_resume(self, resume_content: Dict, job_description: str) -> Dict:
         """
         Analyzes a resume against a job description and provides improvement suggestions.
-        
-        Args:
-            resume_content: Dictionary containing resume sections
-            job_description: String containing the target job description
-        
-        Returns:
-            Dictionary containing analysis results and suggestions
         """
-        # Prepare the prompt for GPT
-        prompt = self._create_analysis_prompt(resume_content, job_description)
-        
+        logging.info("Starting resume analysis")
+    
         try:
+            # Validate inputs
+            if not resume_content:
+                raise ValueError("Resume content is missing")
+            if not job_description:
+                raise ValueError("Job description is missing")
+                
+            # Create the analysis prompt
+            prompt = self._create_analysis_prompt(resume_content, job_description)
+        
+            # Get GPT analysis
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo", 
                 messages=[
@@ -32,11 +34,12 @@ class ResumeAnalyzer:
                 ],
                 response_format={ "type": "json_object" }
             )
-            
+        
             return json.loads(response.choices[0].message.content)
         
         except Exception as e:
-            raise Exception(f"Error analyzing resume: {str(e)}")
+            logging.error(f"Error analyzing resume: {str(e)}", exc_info=True)
+            raise Exception(f"Resume analysis failed: {str(e)}")
 
     def _create_analysis_prompt(self, resume_content: Dict, job_description: str) -> str:
         """Creates a detailed prompt for GPT analysis."""
@@ -82,7 +85,7 @@ class ResumeAnalyzer:
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are an expert career counselor. Suggest relevant job titles based on the candidate's experience and skills."},
-                    {"role": "user", "content": f"""Based on this resume content, suggest 5-10 relevant job titles that this candidate should consider applying for:
+                    {"role": "user", "content": f"""Based on this resume content and the job description, suggest 5 relevant job titles that this candidate should consider applying for:
                     
                     {json.dumps(resume_content, indent=2)}
                     
