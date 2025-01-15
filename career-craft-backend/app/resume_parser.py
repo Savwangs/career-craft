@@ -62,7 +62,6 @@ class ResumeParser:
 
     def extract_sections(self, text: str) -> Dict[str, Any]:
         """Extract different sections of the resume."""
-        # Basic section extraction
         sections = {
             "summary": "",
             "experience": [],
@@ -73,7 +72,6 @@ class ResumeParser:
         # Use NLP to identify sections
         doc = self.nlp(text)
         
-        # Simple section identification based on common headers
         current_section = None
         current_content = []
         
@@ -82,30 +80,42 @@ class ResumeParser:
             lower_line = line.lower()
             
             if any(keyword in lower_line for keyword in ['experience', 'work history']):
+                if current_section and current_content:
+                    sections[current_section] = ' '.join(current_content)
                 current_section = 'experience'
+                current_content = []
                 continue
             elif any(keyword in lower_line for keyword in ['education', 'academic']):
+                if current_section and current_content:
+                    sections[current_section] = ' '.join(current_content)
                 current_section = 'education'
+                current_content = []
                 continue
             elif any(keyword in lower_line for keyword in ['skills', 'technologies']):
+                if current_section and current_content:
+                    sections[current_section] = ' '.join(current_content)
                 current_section = 'skills'
+                current_content = []
                 continue
             elif any(keyword in lower_line for keyword in ['summary', 'objective']):
+                if current_section and current_content:
+                    sections[current_section] = ' '.join(current_content)
                 current_section = 'summary'
+                current_content = []
                 continue
                 
             if current_section and line:
                 current_content.append(line)
-                
-        # Process collected content
-        if current_content:
-            sections[current_section] = ' '.join(current_content)
         
+        # Add the last section if it exists
+        if current_section and current_content:
+            sections[current_section] = ' '.join(current_content)
+            
+        # Return sections even if some are empty
         return sections
 
     def parse(self, file_path: str, file_type: str) -> Dict[str, Any]:
         """Main parsing function."""
-        # Extract text based on file type
         if file_type == "application/pdf":
             text = self.extract_text_from_pdf(file_path)
         elif file_type in ["application/docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
@@ -113,12 +123,17 @@ class ResumeParser:
         else:
             raise ValueError("Unsupported file type")
 
-        # Extract information
         contact_info = self.extract_contact_info(text)
         sections = self.extract_sections(text)
 
-        # Combine all extracted information
+        # Track missing sections
+        missing_sections = []
+        for section in ['education', 'experience', 'skills']:
+            if not sections[section]:
+                missing_sections.append(section)
+
         return {
             **contact_info,
-            **sections
+            **sections,
+            "missing_sections": missing_sections
         }
