@@ -122,28 +122,42 @@ const ResumeInput = ({ onSubmit }) => {
     setError('');
 
     if (!jobDescription) {
-      setError('Please provide a job description');
-      return;
+        setError('Please provide a job description');
+        return;
     }
 
-    if (inputMethod === 'form' && (!formData.personalInfo.fullName || !formData.experience.length)) {
-      setError('Please fill in at least your name and one experience entry');
-      return;
+    if (inputMethod === 'form') {
+        if (!formData || !formData.personalInfo || !formData.personalInfo.fullName) {
+            setError('Please provide your full name.');
+            return;
+        }
+
+        if (!formData.experience || formData.experience.length === 0) {
+            setError('Please add at least one experience entry.');
+            return;
+        }
     }
 
     if (inputMethod === 'upload' && !resumeFile) {
-      setError('Please upload your resume');
-      return;
+        setError('Please upload your resume.');
+        return;
     }
 
     try {
-      await onSubmit({
-        inputMethod,
-        jobDescription,
-        data: inputMethod === 'form' ? formData : resumeFile
-      });
+        console.log('Submitting data:', {
+            inputMethod,
+            data: inputMethod === 'form' ? formData : resumeFile,
+            jobDescription
+        });
+
+        await onSubmit({
+            inputMethod,
+            data: inputMethod === 'form' ? formData : resumeFile,  // 🔄 Correct key is `data`
+            jobDescription
+        });
     } catch (err) {
-      setError(err.message);
+        console.error('Resume submission error:', err);
+        setError(err.message || 'Failed to process resume');
     }
   };
 
