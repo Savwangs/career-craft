@@ -13,35 +13,41 @@ const PrivateRoute = ({ children }) => {
     return <div>Loading...</div>;
   }
   
-  return user ? children : <Navigate to="/login" replace />; // Changed from /signin to /login
+  return user ? children : <Navigate to="/login" replace />;
 };
 
-function App() {
+function AppRoutes() {
   const { user } = useAuth();
 
   return (
+    <Routes>
+      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+      <Route path="/" element={
+        <PrivateRoute>
+          <>
+            <Navigation />
+            <Dashboard />
+          </>
+        </PrivateRoute>
+      } />
+      <Route path="/create-resume" element={
+        <PrivateRoute>
+          <>
+            <Navigation />
+            <ResumeBuilder />
+          </>
+        </PrivateRoute>
+      } />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
     <AuthProvider>
       <Router>
-        <Routes>
-          <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-          <Route path="/" element={
-            <PrivateRoute>
-              <>
-                <Navigation />
-                <Dashboard />
-              </>
-            </PrivateRoute>
-          } />
-          <Route path="/create-resume" element={
-            <PrivateRoute>
-              <>
-                <Navigation />
-                <ResumeBuilder />
-              </>
-            </PrivateRoute>
-          } />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <AppRoutes />
       </Router>
     </AuthProvider>
   );
