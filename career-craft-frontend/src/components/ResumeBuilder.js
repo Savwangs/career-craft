@@ -4,43 +4,52 @@ import ResumePreview from './ResumePreview';
 import { apiService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getAuth } from "firebase/auth";
 
 const ResumeBuilder = () => {
     const navigate = useNavigate();
-    const { currentUser } = useAuth();
+    const { user } = useAuth();
     const [resumeData, setResumeData] = useState(null);
     const [jobDescription, setJobDescription] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [feedback, setFeedback] = useState(null);
+    const [recommendations, setRecommendations] = useState(null);
 
     const handleResumeSubmit = async (data) => {
+        console.log('Data being submitted:', data);
+    
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+    
+        if (!currentUser) {
+            setError('Authentication error. Please log in again.');
+            return;
+        }
+
+        const token = await currentUser.getIdToken();
+    
         try {
             setIsLoading(true);
             setError(null);
-            let response;
-            
-            if (data.inputMethod === 'form') {
-                response = await apiService.createResume(currentUser.token, {
-                    resumeData: data.data,
-                    jobDescription: data.jobDescription
-                });
-            } else {
-                const formData = new FormData();
-                formData.append('resume', data.data);
-                formData.append('jobDescription', data.jobDescription);
-                
-                response = await apiService.createResume(currentUser.token, formData);
+    
+            const response = await apiService.createResume(token, {
+                inputMethod: data.inputMethod,
+                data: data.data,
+                jobDescription: data.jobDescription
+            });
+    
+            // Update state with all response data
+            if (response.content) {
+                setResumeData(response.content);
             }
-
-            setResumeData(response.content);
             setJobDescription(data.jobDescription);
-
-            if (response.id) {
-                navigate('/dashboard');
-            }
+            setFeedback(response.feedback);
+            setRecommendations(response.recommendations);
+    
         } catch (error) {
             console.error('Error creating resume:', error);
-            setError('Failed to process resume. Please try again.');
+            setError(error.message || 'Failed to process resume. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -54,6 +63,22 @@ const ResumeBuilder = () => {
                     {error && (
                         <div className="mt-4 p-4 bg-red-50 text-red-500 rounded-md">
                             {error}
+                        </div>
+                    )}
+                    {feedback && (
+                        <div className="mt-4 p-4 bg-blue-50 text-blue-700 rounded-md">
+                            <h3 className="font-bold mb-2">Feedback:</h3>
+                            <p>{feedback}</p>
+                        </div>
+                    )}
+                    {recommendations && recommendations.length > 0 && (
+                        <div className="mt-4 p-4 bg-green-50 text-green-700 rounded-md">
+                            <h3 className="font-bold mb-2">Recommendations:</h3>
+                            <ul className="list-disc pl-4">
+                                {recommendations.map((rec, index) => (
+                                    <li key={index}>{rec}</li>
+                                ))}
+                            </ul>
                         </div>
                     )}
                 </div>
