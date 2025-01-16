@@ -16,9 +16,12 @@ PyPDF
 spacy
 docx2pdf
 PyPDF2
-python-docx
 pydantic[email]
 slowapi
 openai
-python-docx2pdf
 pathlib
+pandas 
+nltk 
+scikit-learn 
+beautifulsoup4 
+python-docx  
