@@ -1,22 +1,33 @@
 import { auth } from '../firebase';
 import { 
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  sendPasswordResetEmail
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut,
+    sendPasswordResetEmail,
+    setPersistence,
+    browserLocalPersistence
 } from 'firebase/auth';
 
 export const authService = {
   async login(email, password) {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const token = await userCredential.user.getIdToken();
-    localStorage.setItem('token', token);
-    return userCredential.user;
+    try {
+        // Set persistence first
+        await setPersistence(auth, browserLocalPersistence);
+        
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const token = await userCredential.user.getIdToken(true);
+        localStorage.setItem('token', token);
+        console.log("Login successful, token stored:", token);
+        return userCredential.user;
+    } catch (error) {
+        console.error("Login error:", error);
+        throw error;
+    }
   },
 
   async register(email, password) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const token = await userCredential.user.getIdToken();
+    const token = await userCredential.user.getIdToken(true); // Force refresh
     localStorage.setItem('token', token);
     return userCredential.user;
   },
@@ -25,7 +36,6 @@ export const authService = {
     try {
       await signOut(auth);
       localStorage.removeItem('token');
-      window.location.href = '/login'; // Force redirect to login page
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
@@ -36,7 +46,21 @@ export const authService = {
     await sendPasswordResetEmail(auth, email);
   },
 
-  getToken() {
-    return localStorage.getItem('token');
+  async getToken() {
+    const currentUser = auth.currentUser;
+    console.log("Getting token for user:", currentUser?.email);
+    if (!currentUser) {
+        console.log('No current user found');
+        return null;
+    }
+    try {
+      const newToken = await currentUser.getIdToken(true);
+      console.log('New token generated:', newToken);
+      localStorage.setItem('token', newToken);
+      return newToken;
+    } catch (error) {
+      console.error('Error getting token:', error);
+      return null;
+    }
   }
 };
