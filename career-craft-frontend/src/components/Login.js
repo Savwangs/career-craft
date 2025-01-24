@@ -1,184 +1,91 @@
 import React, { useState } from 'react';
-import { sendSignInLinkToEmail, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../firebase'; // Import the auth object from firebase-config.js
+import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'react-hot-toast';
 
-const Login = () => {
+export default function Login() {
+  const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [isRegister, setIsRegister] = useState(false);
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { login, register } = useAuth();  // Changed from signup to register
   const navigate = useNavigate();
 
-  const handleEmailChange = (e) => setEmail(e.target.value);
-  const handlePasswordChange = (e) => setPassword(e.target.value);
-  const handleConfirmPasswordChange = (e) => setConfirmPassword(e.target.value);
-
-  // Handle the form submission (login or register or forgot password)
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (isForgotPassword) {
-      // Handle the password reset link sending (when in forgot password mode)
-      if (!email) {
-        setError('Please enter your email');
-        return;
-      }
-
-      try {
-        await sendPasswordResetEmail(auth, email);
-        setMessage('Password reset link sent! Check your email to continue.');
-      } catch (err) {
-        setError('Error: ' + err.message);
-      }
-    } else {
-      // For Login or Register, check if email and password are filled
-      if (!email || !password) {
-        setError('Please fill in both fields');
-        return;
-      }
-
-      if (isRegister) {
-        // Handle Registration
-        if (password !== confirmPassword) {
-          setError('Passwords do not match');
-          return;
-        }
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          const actionCodeSettings = {
-            url: window.location.href,
-            handleCodeInApp: true,
-          };
-          await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-          setMessage('Registration successful! Check your email to continue.');
-        } catch (err) {
-          if (err.code === 'auth/email-already-in-use') {
-            setError('Email already in use');
-          } else {
-            setError('Error: ' + err.message);
-          }
-        }
-      } else {
-        // Handle Login
-        try {
-          const userCredential = await signInWithEmailAndPassword(auth, email, password);
-          setMessage('Login successful! Redirecting to your dashboard...');
-          navigate('/dashboard'); // Redirect to dashboard (implement later)
-        } catch (err) {
-          setError('Invalid email or password');
-        }
-      }
-    }
-  };
-
-  // Handle confirm password submission for registration
-  const handleConfirmPasswordSubmit = async (e) => {
-    e.preventDefault();
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+    setLoading(true);
 
     try {
-      await updateProfile(auth.currentUser, {
-        displayName: email,
-      });
-      setMessage('Account created successfully!');
-      navigate('/dashboard'); // Redirect to dashboard (implement later)
-    } catch (err) {
-      setError('Error during account creation: ' + err.message);
+      if (isRegistering) {
+        await register(email, password);
+        toast.success('Account created successfully!');
+      } else {
+        await login(email, password);
+        toast.success('Logged in successfully!');
+      }
+      navigate('/dashboard');
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm">
-        <h2 className="text-2xl font-semibold text-center mb-6">{isRegister ? 'Register' : isForgotPassword ? 'Forgot Password' : 'Login'}</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="form-group">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email:</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={handleEmailChange}
-              required
-              className="mt-1 p-2 w-full border rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"
-            />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            {isRegistering ? 'Create your account' : 'Sign in to your account'}
+          </h2>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <input
+                type="email"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
 
-          {!isForgotPassword && (
-            <>
-              <div className="form-group">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password:</label>
-                <input
-                  type="password"
-                  id="password"
-                  value={password}
-                  onChange={handlePasswordChange}
-                  required
-                  className="mt-1 p-2 w-full border rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-
-              {isRegister && (
-                <div className="form-group">
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">Confirm Password:</label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    value={confirmPassword}
-                    onChange={handleConfirmPasswordChange}
-                    required
-                    className="mt-1 p-2 w-full border rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              )}
-            </>
-          )}
-
-          <div className="flex flex-col items-center space-y-4">
-            <button type="submit" className="w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-              {isRegister ? 'Register' : isForgotPassword ? 'Submit' : 'Login'}
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              {loading ? 'Loading...' : (isRegistering ? 'Sign Up' : 'Sign In')}
             </button>
+          </div>
 
-            <div className="text-center">
-              {isRegister ? (
-                <p className="text-sm">
-                  Already have an account?{' '}
-                  <span onClick={() => setIsRegister(false)} className="text-green-500 cursor-pointer hover:underline">Login</span>
-                </p>
-              ) : isForgotPassword ? (
-                <p className="text-sm">
-                  Remembered your password?{' '}
-                  <span onClick={() => setIsForgotPassword(false)} className="text-green-500 cursor-pointer hover:underline">Login</span>
-                </p>
-              ) : (
-                <p className="text-sm">
-                  Don't have an account?{' '}
-                  <span onClick={() => setIsRegister(true)} className="text-green-500 cursor-pointer hover:underline">Register</span>
-                </p>
-              )}
-            </div>
-
-            {!isForgotPassword && (
-              <p className="text-sm text-center">
-                <span onClick={() => setIsForgotPassword(true)} className="text-blue-500 cursor-pointer hover:underline">Forgot Password?</span>
-              </p>
-            )}
+          <div className="text-center">
+            <button
+              type="button"
+              className="text-indigo-600 hover:text-indigo-500"
+              onClick={() => setIsRegistering(!isRegistering)}
+            >
+              {isRegistering
+                ? 'Already have an account? Sign in'
+                : "Don't have an account? Sign up"}
+            </button>
           </div>
         </form>
-
-        {error && <p className="mt-4 text-red-500 text-center">{error}</p>}
-        {message && <p className="mt-4 text-green-500 text-center">{message}</p>}
       </div>
     </div>
   );
-};
-
-export default Login;
+}
