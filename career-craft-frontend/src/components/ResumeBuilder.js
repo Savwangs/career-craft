@@ -1,105 +1,244 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { resumeService } from '../services/resumeService';
 import ResumeInput from './ResumeInput';
 import ResumePreview from './ResumePreview';
-import { apiService } from '../services/api';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { getAuth } from "firebase/auth";
 
-const ResumeBuilder = () => {
-    const navigate = useNavigate();
-    const { user } = useAuth();
-    const [resumeData, setResumeData] = useState(null);
-    const [jobDescription, setJobDescription] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [feedback, setFeedback] = useState(null);
-    const [recommendations, setRecommendations] = useState(null);
+export default function ResumeBuilder() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [activeStep, setActiveStep] = useState('form'); // 'form', 'preview'
+  const [resumeData, setResumeData] = useState({
+    contact_info: {
+      name: '',
+      email: '',
+      phone: '',
+      location: ''
+    },
+    summary: '',
+    experience: [],
+    education: [],
+    skills: [],
+    projects: [],
+    achievements: []
+  });
+  const [jobDescription, setJobDescription] = useState('');
+  const [feedback, setFeedback] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
 
-    const handleResumeSubmit = async (data) => {
-        console.log('Data being submitted:', data);
-    
-        const auth = getAuth();
-        const currentUser = auth.currentUser;
-    
-        if (!currentUser) {
-            setError('Authentication error. Please log in again.');
-            return;
-        }
+  useEffect(() => {
+    if (id && id !== 'new') {
+      loadResume();
+    }
+  }, [id]);
 
-        const token = await currentUser.getIdToken();
-    
+  const loadResume = async () => {
+    try {
+      setLoading(true);
+      const data = await resumeService.getResumeById(id);
+      setResumeData(data);
+      setJobDescription(data.target_job_description || '');
+    } catch (error) {
+      toast.error('Failed to load resume');
+      navigate('/dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+  
+    try {
+      setLoading(true);
+      const response = await resumeService.uploadResume(file, jobDescription);
+      
+      // Automatically fetch feedback and recommendations
+      const feedbackData = await resumeService.analyzeResume(response.id, jobDescription);
+      const recommendationsData = await resumeService.getJobRecommendations(response.id);
+      
+      setResumeData(response);
+      setFeedback(feedbackData);
+      setRecommendations(recommendationsData);
+      
+      // Switch to preview step
+      setActiveStep('preview');
+      
+      toast.success('Resume uploaded and analyzed successfully');
+    } catch (error) {
+      toast.error(error.message || 'Failed to upload resume');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      const data = {
+        ...resumeData,
+        title: resumeData.title || 'My Resume',
+        summary: resumeData.summary || '',
+        target_job_description: jobDescription,
+        contact_info: {
+          ...resumeData.contact_info,
+          name: resumeData.contact_info.name || '',
+          email: resumeData.contact_info.email || '',
+          phone: resumeData.contact_info.phone || '',
+          location: resumeData.contact_info.location || ''
+        },
+        education: (resumeData.education || []).map(edu => ({
+          ...edu,
+          institution: edu.institution || '',
+          degree: edu.degree || '',
+          field_of_study: edu.field_of_study || '',
+          start_date: edu.start_date ? new Date(edu.start_date).toISOString() : null,
+          end_date: edu.end_date ? new Date(edu.end_date).toISOString() : null,
+          gpa: edu.gpa || null
+        })),
+        experience: (resumeData.experience || []).map(exp => ({
+          ...exp,
+          company: exp.company || '',
+          position: exp.position || '',
+          start_date: exp.start_date ? new Date(exp.start_date).toISOString() : null,
+          end_date: exp.end_date ? new Date(exp.end_date).toISOString() : null,
+          description: exp.description || '',
+          highlights: exp.highlights || []
+        })),
+        skills: (resumeData.skills || []).map(skill => ({
+          ...skill,
+          name: skill.name || '',
+          category: skill.category || 'Technical',
+          proficiency_level: skill.proficiency_level || null
+        })),
+        projects: (resumeData.projects || []).map(project => ({
+          ...project,
+          title: project.title || '',
+          description: project.description || '',
+          technologies: project.technologies || [],
+          url: project.url || null,
+          start_date: project.start_date ? new Date(project.start_date).toISOString() : null,
+          end_date: project.end_date ? new Date(project.end_date).toISOString() : null
+        })),
+        achievements: (resumeData.achievements || []).map(achievement => ({
+          ...achievement,
+          title: achievement.title || '',
+          description: achievement.description || '',
+          date: achievement.date ? new Date(achievement.date).toISOString() : null
+        }))
+      };
+
+      let response;
+      if (id && id !== 'new') {
+        response = await resumeService.updateResume(id, data);
+        toast.success('Resume updated successfully');
+      } else {
+        response = await resumeService.createResume(data);
+        toast.success('Resume created successfully');
+      }
+
+      if (jobDescription && response.id) {
         try {
-            setIsLoading(true);
-            setError(null);
-    
-            const response = await apiService.createResume(token, {
-                inputMethod: data.inputMethod,
-                data: data.data,
-                jobDescription: data.jobDescription
-            });
-    
-            // Update state with all response data
-            if (response.content) {
-                setResumeData(response.content);
-            }
-            setJobDescription(data.jobDescription);
-            setFeedback(response.feedback);
-            setRecommendations(response.recommendations);
-    
+          const feedbackData = await resumeService.analyzeResume(response.id, jobDescription);
+          setFeedback(feedbackData);
+          
+          const recommendationsData = await resumeService.getJobRecommendations(response.id);
+          setRecommendations(recommendationsData);
         } catch (error) {
-            console.error('Error creating resume:', error);
-            setError(error.message || 'Failed to process resume. Please try again.');
-        } finally {
-            setIsLoading(false);
+          console.error('Error getting resume feedback:', error);
         }
-    };
+      }
 
-    return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div>
-                    <ResumeInput onSubmit={handleResumeSubmit} />
-                    {error && (
-                        <div className="mt-4 p-4 bg-red-50 text-red-500 rounded-md">
-                            {error}
-                        </div>
-                    )}
-                    {feedback && (
-                        <div className="mt-4 p-4 bg-blue-50 text-blue-700 rounded-md">
-                            <h3 className="font-bold mb-2">Feedback:</h3>
-                            <p>{feedback}</p>
-                        </div>
-                    )}
-                    {recommendations && recommendations.length > 0 && (
-                        <div className="mt-4 p-4 bg-green-50 text-green-700 rounded-md">
-                            <h3 className="font-bold mb-2">Recommendations:</h3>
-                            <ul className="list-disc pl-4">
-                                {recommendations.map((rec, index) => (
-                                    <li key={index}>{rec}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </div>
-                
-                {(resumeData && jobDescription) && (
-                    <div className="lg:sticky lg:top-8">
-                        <ResumePreview 
-                            resumeContent={resumeData}
-                            jobDescription={jobDescription}
-                        />
-                    </div>
-                )}
-            </div>
-            
-            {isLoading && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-                </div>
-            )}
+      setActiveStep('preview');
+    } catch (error) {
+      toast.error(error.message || 'Failed to save resume');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      setLoading(true);
+      await resumeService.generateResume(resumeData.id);
+      toast.success('Resume downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to download resume');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {id === 'new' ? 'Create New Resume' : 'Edit Resume'}
+          </h1>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              {loading ? 'Saving...' : 'Save & Preview'}
+            </button>
+          </div>
         </div>
-    );
-};
 
-export default ResumeBuilder;
+        {activeStep === 'form' ? (
+          <div className="bg-white shadow rounded-lg">
+            <div className="p-6">
+              <div className="mb-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Upload Existing Resume</h2>
+                <input
+                  type="file"
+                  accept=".pdf,.docx"
+                  onChange={handleFileUpload}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+              </div>
+
+              <div className="mb-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-4">Target Job Description</h2>
+                <textarea
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  className="w-full h-32 p-2 border rounded-md"
+                  placeholder="Paste the job description here..."
+                />
+              </div>
+
+              <ResumeInput
+                resumeData={resumeData}
+                setResumeData={setResumeData}
+              />
+            </div>
+          </div>
+        ) : (
+          <ResumePreview
+            resumeData={resumeData}
+            feedback={feedback}
+            recommendations={recommendations}
+            onDownload={handleDownload}
+            onEdit={() => setActiveStep('form')}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
