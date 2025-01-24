@@ -1,435 +1,363 @@
-from fastapi import FastAPI, HTTPException, Depends, Header, Request, status, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, status, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from app.database import Base, engine, get_db
-from app.models import User, Resume
-from app.schemas import (
-    UserBase, UserLogin, UserCreate, ResumeBase, ResumeCreate, 
-    ResumeResponse, Token, PaginatedResponse, ResumeGenerationRequest
-)
-from app.utils import create_access_token, get_current_user, convert_docx_to_pdf
-from app.exceptions import DatabaseError
-from app.resume_generator import ResumeGenerator
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from firebase_admin import auth
-from app.utils import initialize_firebase_admin
-import os
-import requests
-from dotenv import load_dotenv
-from datetime import datetime
+from typing import List
 import tempfile
-from pathlib import Path
-from app.resume_parser import ResumeParser
-from app.schemas import ParsedResume, ResumeUploadResponse
-from app.resume_analyzer import ResumeAnalyzer
-import logging
-import base64
+import os
+import firebase_admin
+from firebase_admin import credentials, auth
+from datetime import datetime
 
-logging.basicConfig(level=logging.INFO)
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+from app.database import get_db, engine
+from app.models import Base  # Add this import
+from app import models  # Add this import
+from app.schemas import (
+    UserCreate, User, Resume, ResumeCreate, ResumeFeedback,
+    JobRecommendation
 )
+from app.resume_parser import ResumeParser
+from app.resume_generator import ResumeGenerator
+from app.resume_analyzer import ResumeAnalyzer
+from app.utils import get_current_user
 
-logger = logging.getLogger(__name__)
+# Initialize Firebase Admin - Update the path to your service account key
+# Initialize Firebase Admin
+cred = credentials.Certificate(os.getenv('FIREBASE_ADMIN_SDK_PATH'))
+firebase_admin.initialize_app(cred, {
+    'projectId': os.getenv('FIREBASE_PROJECT_ID')
+})
 
-
-load_dotenv()
-
-initialize_firebase_admin()
-
-# Initialize analyzer
-resume_analyzer = ResumeAnalyzer()
-
-# Initialize database
+# Create database tables
 Base.metadata.create_all(bind=engine)
 
-# Initialize rate limiter
-limiter = Limiter(key_func=get_remote_address)
-app = FastAPI(title="CareerCraft API")
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app = FastAPI(title="Resume Builder API")
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # React development server
-        os.getenv("FRONTEND_URL", "http://localhost:8000")
-    ],
+    allow_origins=["http://localhost:3000"],  # Update with your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Exception handlers
-@app.exception_handler(DatabaseError)
-async def database_exception_handler(request, exc):
-    return JSONResponse(
-        status_code=500,
-        content={"message": "Database error occurred", "details": str(exc)},
-    )
+# Initialize components
+resume_parser = ResumeParser()
+resume_generator = ResumeGenerator()
+resume_analyzer = ResumeAnalyzer()
 
-# Routes
-@app.get("/")
-async def root():
-    return {"message": "Welcome to CareerCraft API"}
-
-# In main.py, update the generate-resume endpoint
-@app.post("/generate-resume")
-async def generate_resume(
-    request: Request,
-    resume_data: ResumeGenerationRequest,
-    current_user: str = Depends(get_current_user)
-):
+@app.post("/api/users", response_model=User)
+async def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    """Create a new user."""
     try:
-        logging.info("Starting resume generation process")
-        
-        if not resume_data.personal_info:
-            raise HTTPException(status_code=400, detail="Missing personal information")
-            
-        generator = ResumeGenerator()
-        doc, feedback = generator.generate(resume_data.dict())
-        
-        try:
-            logging.info("Converting document to PDF")
-            pdf_content, conversion_method = convert_docx_to_pdf(doc)
-            
-            if not pdf_content:
-                raise ValueError("PDF conversion produced empty content")
-                
-            pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
-            
-            return {
-                "pdf": pdf_base64,
-                "feedback": feedback,
-                "conversion_method": conversion_method,
-                "recommendations": []
-            }
-            
-        except Exception as e:
-            logging.error(f"PDF conversion error: {str(e)}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"PDF conversion failed: {str(e)}. Please ensure LibreOffice is installed."
-            )
-            
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        logging.error(f"Resume generation error: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Resume generation failed: {str(e)}"
-        )
-
-@app.post("/auth/register", response_model=Token)
-@limiter.limit("5/minute")
-async def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
-    try:
-        # Check if user exists
-        try:
-            existing_user = auth.get_user_by_email(user.email)
-            raise HTTPException(status_code=400, detail="Email already registered")
-        except auth.UserNotFoundError:
-            pass
-        
-        # Create user in Firebase
-        user_record = auth.create_user(
-            email=user.email,
-            password=user.password
-        )
+        # Verify Firebase token
+        auth.get_user(user.firebase_uid)
         
         # Create user in database
-        db_user = User(id=user_record.uid, email=user.email)
+        db_user = models.User(
+            email=user.email,
+            firebase_uid=user.firebase_uid
+        )
         db.add(db_user)
         db.commit()
-        
-        # Create access token
-        access_token = create_access_token({"sub": user.email})
-        
-        return Token(
-            access_token=access_token,
-            token_type="bearer",
-            user_id=user_record.uid
+        db.refresh(db_user)
+        return db_user
+    except auth.AuthError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Firebase token"
         )
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/auth/login", response_model=Token)
-async def login(user: UserLogin, db: Session = Depends(get_db)):
-    """
-    Log in a user by verifying their email and password.
-    """
-    try:
-        # Get Firebase authentication configuration
-        api_key = os.getenv("FIREBASE_API_KEY")
-        
-        # Create the sign-in request URL
-        auth_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
-        
-        # Prepare the request payload
-        payload = {
-            "email": user.email,
-            "password": user.password,
-            "returnSecureToken": True
-        }
-        
-        # Make the authentication request
-        response = requests.post(auth_url, json=payload)
-        
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid email or password"
-            )
-            
-        firebase_user = auth.get_user_by_email(user.email)
-        
-        # Generate access token
-        access_token = create_access_token({"sub": user.email})
-        
-        return Token(
-            access_token=access_token,
-            token_type="bearer",
-            user_id=firebase_user.uid
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Invalid email or password")
-
-@app.post("/resumes/", response_model=ResumeResponse)
-@limiter.limit("5/minute")
-async def create_resume(
-    request: Request,
-    resume: ResumeCreate,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+@app.post("/api/resumes/upload", response_model=Resume)
+async def upload_resume(
+    file: UploadFile = File(...),
+    job_description: str = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    try:
-        firebase_user = auth.get_user_by_email(current_user)
-        
-        db_resume = Resume(
-            content=resume.content,
-            title=resume.title,
-            user_id=firebase_user.uid
+    """Upload and parse a resume file."""
+    if not job_description:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Job description is required"
         )
+        
+    allowed_types = {
+        "application/pdf": ".pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx"
+    }
+    
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PDF and DOCX files are supported"
+        )
+    
+    try:
+        # Create temp directory if it doesn't exist
+        os.makedirs("temp", exist_ok=True)
+        
+        # Save uploaded file with correct extension
+        file_extension = allowed_types[file.content_type]
+        temp_path = f"temp/upload_{datetime.now().timestamp()}{file_extension}"
+        
+        with open(temp_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # Parse resume
+        resume_data = resume_parser.parse_resume(temp_path)
+        
+        # Create resume in database with explicit relationship handling
+        db_resume = models.Resume(
+            user_id=current_user.id,
+            title=resume_data.title,
+            summary=resume_data.summary,
+            contact_info=resume_data.contact_info,
+            target_job_description=job_description or resume_data.target_job_description,
+            education=[
+                models.Education(
+                    institution=edu.institution,
+                    degree=edu.degree,
+                    field_of_study=edu.field_of_study,
+                    start_date=edu.start_date,
+                    end_date=edu.end_date,
+                    gpa=edu.gpa
+                ) for edu in resume_data.education
+            ],
+            experience=[
+                models.Experience(
+                    company=exp.company,
+                    position=exp.position,
+                    start_date=exp.start_date,
+                    end_date=exp.end_date,
+                    description=exp.description,
+                    highlights=exp.highlights
+                ) for exp in resume_data.experience
+            ],
+            skills=[
+                models.Skill(
+                    name=skill.name,
+                    category=skill.category,
+                    proficiency_level=skill.proficiency_level
+                ) for skill in resume_data.skills
+            ],
+            projects=[
+                models.Project(
+                    title=proj.title,
+                    description=proj.description,
+                    technologies=proj.technologies or [],
+                    url=proj.url,
+                    start_date=proj.start_date,
+                    end_date=proj.end_date
+                ) for proj in (resume_data.projects or [])
+            ],
+            achievements=[
+                models.Achievement(
+                    title=ach.title,
+                    description=ach.description,
+                    date=ach.date
+                ) for ach in (resume_data.achievements or [])
+            ]
+        )
+        
+        db.add(db_resume)
+        db.commit()
+        db.refresh(db_resume)
+        
+        # Clean up temp file
+        os.unlink(temp_path)
+        
+        return db_resume
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@app.post("/api/resumes", response_model=Resume)
+async def create_resume(
+    resume: ResumeCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new resume from form data."""
+    if not resume.target_job_description:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Job description is required"
+        )
+    
+    try:
+        # Add user ID
+        db_resume = models.Resume(**resume.dict(), user_id=current_user.id)
         db.add(db_resume)
         db.commit()
         db.refresh(db_resume)
         return db_resume
     except Exception as e:
-        db.rollback()
-        raise DatabaseError(str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-@app.get("/resumes/", response_model=PaginatedResponse)
-async def list_resumes(
-    page: int = 1,
-    size: int = 10,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+@app.get("/api/resumes", response_model=List[Resume])
+async def get_resumes(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    try:
-        firebase_user = auth.get_user_by_email(current_user)
-        skip = (page - 1) * size
-        
-        total = db.query(Resume)\
-            .filter(Resume.user_id == firebase_user.uid)\
-            .count()
-            
-        resumes = db.query(Resume)\
-            .filter(Resume.user_id == firebase_user.uid)\
-            .order_by(Resume.created_at.desc())\
-            .offset(skip)\
-            .limit(size)\
-            .all()
-            
-        return {
-            "items": resumes,
-            "total": total,
-            "page": page,
-            "size": size
-        }
-    except Exception as e:
-        raise DatabaseError(str(e))
+    """Get all resumes for the current user."""
+    return db.query(models.Resume).filter(models.Resume.user_id == current_user.id).all()
 
-@app.get("/resumes/{resume_id}", response_model=ResumeResponse)
+@app.get("/api/resumes/{resume_id}", response_model=Resume)
 async def get_resume(
     resume_id: int,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    try:
-        firebase_user = auth.get_user_by_email(current_user)
-        resume = db.query(Resume)\
-            .filter(Resume.id == resume_id, Resume.user_id == firebase_user.uid)\
-            .first()
-        if resume is None:
-            raise HTTPException(status_code=404, detail="Resume not found")
-        return resume
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise DatabaseError(str(e))
+    """Get a specific resume by ID."""
+    resume = db.query(models.Resume).filter(
+        models.Resume.id == resume_id,
+        models.Resume.user_id == current_user.id
+    ).first()
+    
+    if not resume:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found"
+        )
+    
+    return resume
 
-@app.put("/resumes/{resume_id}", response_model=ResumeResponse)
+@app.put("/api/resumes/{resume_id}", response_model=Resume)
 async def update_resume(
     resume_id: int,
-    resume: ResumeCreate,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    resume_update: ResumeCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    try:
-        firebase_user = auth.get_user_by_email(current_user)
-        db_resume = db.query(Resume)\
-            .filter(Resume.id == resume_id, Resume.user_id == firebase_user.uid)\
-            .first()
-        if db_resume is None:
-            raise HTTPException(status_code=404, detail="Resume not found")
-        
-        db_resume.content = resume.content
-        db_resume.title = resume.title
-        db_resume.updated_at = datetime.utcnow()
-        db.commit()
-        db.refresh(db_resume)
-        return db_resume
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise DatabaseError(str(e))
+    """Update a specific resume."""
+    db_resume = db.query(models.Resume).filter(
+        models.Resume.id == resume_id,
+        models.Resume.user_id == current_user.id
+    ).first()
+    
+    if not db_resume:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found"
+        )
+    
+    # Update resume fields
+    for key, value in resume_update.dict().items():
+        setattr(db_resume, key, value)
+    
+    db.commit()
+    db.refresh(db_resume)
+    return db_resume
 
-@app.delete("/resumes/{resume_id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/api/resumes/{resume_id}")
 async def delete_resume(
     resume_id: int,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    try:
-        firebase_user = auth.get_user_by_email(current_user)
-        db_resume = db.query(Resume)\
-            .filter(Resume.id == resume_id, Resume.user_id == firebase_user.uid)\
-            .first()
-        if db_resume is None:
-            raise HTTPException(status_code=404, detail="Resume not found")
-        
-        db.delete(db_resume)
-        db.commit()
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise DatabaseError(str(e))
-
-@app.post("/upload-resume", response_model=ResumeUploadResponse)
-@limiter.limit("5/minute")
-async def upload_resume(
-    request: Request,
-    file: UploadFile = File(...),
-    current_user: str = Depends(get_current_user)
-):
-    try:
-        allowed_types = [
-            "application/pdf",
-            "application/docx",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ]
-        
-        if file.content_type not in allowed_types:
-            raise HTTPException(
-                status_code=400,
-                detail="File must be PDF or DOCX format"
-            )
-
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            content = await file.read()
-            temp_file.write(content)
-            temp_file_path = temp_file.name
-
-        try:
-            parser = ResumeParser()
-            parsed_data = parser.parse(temp_file_path, file.content_type)
-            
-            # Create feedback based on missing sections
-            feedback = []
-            if parsed_data.get("missing_sections"):
-                for section in parsed_data["missing_sections"]:
-                    feedback.append(f"Consider adding a {section.title()} section to strengthen your resume")
-            
-            Path(temp_file_path).unlink()
-            
-            return ResumeUploadResponse(
-                message="Resume successfully parsed",
-                parsed_data=ParsedResume(**parsed_data),
-                feedback=feedback
-            )
-            
-        except Exception as e:
-            Path(temp_file_path).unlink()
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to parse resume: {str(e)}"
-            )
-            
-    except Exception as e:
+    """Delete a specific resume."""
+    db_resume = db.query(models.Resume).filter(
+        models.Resume.id == resume_id,
+        models.Resume.user_id == current_user.id
+    ).first()
+    
+    if not db_resume:
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process resume: {str(e)}"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found"
         )
+    
+    db.delete(db_resume)
+    db.commit()
+    return {"message": "Resume deleted successfully"}
 
-@app.post("/analyze-resume")
+@app.post("/api/resumes/{resume_id}/analyze", response_model=ResumeFeedback)
 async def analyze_resume(
     resume_id: int,
-    job_description: str,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    job_description: str = Body(embed=True),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # Get the resume from database
-    resume = db.query(Resume).filter(
-        Resume.id == resume_id,
-        Resume.user_id == current_user
+    resume = db.query(models.Resume).filter(
+        models.Resume.id == resume_id,
+        models.Resume.user_id == current_user.id
     ).first()
     
     if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-    
-    # Analyze resume
-    try:
-        analysis = resume_analyzer.analyze_resume(
-            json.loads(resume.content),
-            job_description
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found"
         )
-        return analysis
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    
+    feedback = resume_analyzer.analyze_resume(resume, job_description)
+    return feedback
 
-@app.get("/suggest-jobs/{resume_id}")
-async def suggest_jobs(
+@app.post("/api/resumes/{resume_id}/generate")
+async def generate_resume(
     resume_id: int,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # Get the resume
-    resume = db.query(Resume).filter(
-        Resume.id == resume_id,
-        Resume.user_id == current_user
+    """Generate a formatted resume document."""
+    resume = db.query(models.Resume).filter(
+        models.Resume.id == resume_id,
+        models.Resume.user_id == current_user.id
     ).first()
     
     if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found"
+        )
     
-    # Get job suggestions
     try:
-        suggestions = resume_analyzer.suggest_job_titles(json.loads(resume.content))
-        return {"job_titles": suggestions}
+        # Generate resume document
+        output_path = f"temp/resume_{resume_id}_{datetime.now().timestamp()}.docx"
+        os.makedirs("temp", exist_ok=True)
+        
+        generated_path = resume_generator.generate(resume, output_path)
+        
+        # Return file
+        return FileResponse(
+            generated_path,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            filename=f"resume_{resume_id}.docx"
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+@app.get("/api/jobs/recommendations", response_model=List[JobRecommendation])
+async def get_job_recommendations(
+    resume_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get job recommendations based on a resume."""
+    resume = db.query(models.Resume).filter(
+        models.Resume.id == resume_id,
+        models.Resume.user_id == current_user.id
+    ).first()
+    
+    if not resume:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resume not found"
+        )
+    
+    recommendations = resume_analyzer._get_job_recommendations(
+        resume,
+        resume.target_job_description
+    )
+    return recommendations
