@@ -1,302 +1,302 @@
 [
     {
-      "jobTitle": "Software Engineer",
+      "title": "Software Engineer",
       "keyResponsibilities": ["Develop and maintain software applications", "Collaborate with cross-functional teams", "Test and debug software to ensure quality"],
       "requiredSkills": ["Programming (e.g., Python, Java)", "Problem-solving", "Version control (e.g., Git)"],
       "category": "Technology"
     },
     {
-      "jobTitle": "Data Scientist",
+      "title": "Data Scientist",
       "keyResponsibilities": ["Analyze complex datasets", "Build predictive models", "Communicate insights to stakeholders"],
       "requiredSkills": ["Data analysis (e.g., Python, R)", "Machine learning", "Statistical methods"],
       "category": "Technology"
     },
     {
-      "jobTitle": "Web Developer",
+      "title": "Web Developer",
       "keyResponsibilities": ["Design and build websites", "Ensure website functionality and performance", "Optimize user experience"],
       "requiredSkills": ["HTML/CSS/JavaScript", "Front-end frameworks (e.g., React, Angular)", "Back-end technologies (e.g., Node.js)"],
       "category": "Technology"
     },
     {
-      "jobTitle": "Mobile App Developer",
+      "title": "Mobile App Developer",
       "keyResponsibilities": ["Design mobile applications", "Test and deploy apps on app stores", "Troubleshoot and debug applications"],
       "requiredSkills": ["Mobile frameworks (e.g., Flutter, React Native)", "Programming (e.g., Swift, Kotlin)", "UI/UX principles"],
       "category": "Technology"
     },
     {
-      "jobTitle": "DevOps Engineer",
+      "title": "DevOps Engineer",
       "keyResponsibilities": ["Develop CI/CD pipelines", "Monitor and improve system performance", "Automate software delivery processes"],
       "requiredSkills": ["DevOps tools (e.g., Jenkins, Docker)", "Cloud platforms (e.g., AWS, Azure)", "Scripting (e.g., Bash, Python)"],
       "category": "Technology"
     },
     {
-      "jobTitle": "Cybersecurity Analyst",
+      "title": "Cybersecurity Analyst",
       "keyResponsibilities": ["Monitor systems for vulnerabilities", "Implement security measures", "Respond to security breaches"],
       "requiredSkills": ["Network security", "Risk analysis", "Penetration testing"],
       "category": "Technology"
     },
     {
-      "jobTitle": "Cloud Architect",
+      "title": "Cloud Architect",
       "keyResponsibilities": ["Design cloud-based solutions", "Ensure system scalability and reliability", "Migrate legacy systems to the cloud"],
       "requiredSkills": ["Cloud platforms (e.g., AWS, Google Cloud)", "Networking", "System architecture"],
       "category": "Technology"
     },
     {
-      "jobTitle": "AI/ML Engineer",
+      "title": "AI/ML Engineer",
       "keyResponsibilities": ["Develop AI/ML models", "Optimize algorithms for performance", "Deploy machine learning solutions"],
       "requiredSkills": ["Machine learning frameworks (e.g., TensorFlow)", "Programming (e.g., Python, C++)", "Data engineering"],
       "category": "Technology"
     },
     {
-      "jobTitle": "IT Support Specialist",
+      "title": "IT Support Specialist",
       "keyResponsibilities": ["Troubleshoot technical issues", "Provide user support", "Maintain IT systems and networks"],
       "requiredSkills": ["Technical troubleshooting", "Communication skills", "Basic networking"],
       "category": "Technology"
     },
     {
-      "jobTitle": "UI/UX Designer",
+      "title": "UI/UX Designer",
       "keyResponsibilities": ["Design user-friendly interfaces", "Conduct user research", "Create wireframes and prototypes"],
       "requiredSkills": ["Design tools (e.g., Figma, Adobe XD)", "User research", "Prototyping"],
       "category": "Technology"
     },
     {
-      "jobTitle": "Registered Nurse",
+      "title": "Registered Nurse",
       "keyResponsibilities": ["Provide patient care", "Administer medications", "Monitor patient recovery"],
       "requiredSkills": ["Clinical knowledge", "Patient care", "Communication"],
       "category": "Healthcare"
     },
     {
-      "jobTitle": "Medical Laboratory Technician",
+      "title": "Medical Laboratory Technician",
       "keyResponsibilities": ["Conduct laboratory tests", "Analyze samples", "Maintain lab equipment"],
       "requiredSkills": ["Lab procedures", "Attention to detail", "Analytical skills"],
       "category": "Healthcare"
     },
     {
-      "jobTitle": "Pharmacist",
+      "title": "Pharmacist",
       "keyResponsibilities": ["Dispense medications", "Advise patients on drug usage", "Ensure prescriptions are accurate"],
       "requiredSkills": ["Pharmaceutical knowledge", "Attention to detail", "Communication"],
       "category": "Healthcare"
     },
     {
-      "jobTitle": "Physical Therapist",
+      "title": "Physical Therapist",
       "keyResponsibilities": ["Help patients recover mobility", "Develop rehabilitation plans", "Educate patients on exercises"],
       "requiredSkills": ["Therapeutic techniques", "Empathy", "Communication"],
       "category": "Healthcare"
     },
     {
-      "jobTitle": "Healthcare Administrator",
+      "title": "Healthcare Administrator",
       "keyResponsibilities": ["Manage healthcare operations", "Oversee budgets and staff", "Ensure compliance with regulations"],
       "requiredSkills": ["Leadership", "Healthcare management", "Regulatory knowledge"],
       "category": "Healthcare"
     },
     {
-      "jobTitle": "Radiologic Technologist",
+      "title": "Radiologic Technologist",
       "keyResponsibilities": ["Perform imaging tests", "Maintain imaging equipment", "Assist physicians in diagnosis"],
       "requiredSkills": ["Imaging technology", "Attention to detail", "Patient care"],
       "category": "Healthcare"
     },
     {
-      "jobTitle": "Dentist",
+      "title": "Dentist",
       "keyResponsibilities": ["Diagnose oral health issues", "Perform dental procedures", "Educate patients on oral hygiene"],
       "requiredSkills": ["Dental techniques", "Precision", "Patient care"],
       "category": "Healthcare"
     },
     {
-      "jobTitle": "Medical Coder",
+      "title": "Medical Coder",
       "keyResponsibilities": ["Translate medical records into codes", "Ensure coding accuracy", "Assist in billing processes"],
       "requiredSkills": ["Medical coding systems", "Attention to detail", "Organizational skills"],
       "category": "Healthcare"
     },
     {
-      "jobTitle": "Nutritionist",
+      "title": "Nutritionist",
       "keyResponsibilities": ["Advise on diet plans", "Monitor client progress", "Promote healthy eating habits"],
       "requiredSkills": ["Nutritional knowledge", "Empathy", "Communication"],
       "category": "Healthcare"
     },
     {
-      "jobTitle": "Occupational Therapist",
+      "title": "Occupational Therapist",
       "keyResponsibilities": ["Help patients regain daily skills", "Develop therapy plans", "Educate patients and caregivers"],
       "requiredSkills": ["Therapeutic techniques", "Empathy", "Problem-solving"],
       "category": "Healthcare"
     },
     {
-        "jobTitle": "Marketing Manager",
-        "keyResponsibilities": ["Develop and oversee marketing strategies", "Analyze market trends", "Manage campaigns to promote products or services"],
-        "requiredSkills": ["Strategic planning", "Market analysis", "Leadership"],
-        "category": "Marketing & Sales"
-      },
-      {
-        "jobTitle": "Content Strategist",
-        "keyResponsibilities": ["Plan and create engaging content", "Align content with business goals", "Collaborate with creative teams"],
-        "requiredSkills": ["Content creation", "SEO knowledge", "Communication"],
-        "category": "Marketing & Sales"
-      },
-      {
-        "jobTitle": "Digital Marketing Specialist",
-        "keyResponsibilities": ["Execute digital campaigns", "Optimize content for SEO and SEM", "Monitor and analyze campaign performance"],
-        "requiredSkills": ["Digital advertising", "SEO/SEM", "Analytics tools (e.g., Google Analytics)"],
-        "category": "Marketing & Sales"
-      },
-      {
-        "jobTitle": "Sales Representative",
-        "keyResponsibilities": ["Build client relationships", "Meet sales targets", "Present products or services to customers"],
-        "requiredSkills": ["Communication", "Negotiation", "Customer relationship management"],
-        "category": "Marketing & Sales"
-      },
-      {
-        "jobTitle": "Brand Manager",
-        "keyResponsibilities": ["Develop and maintain brand identity", "Analyze brand performance", "Collaborate with marketing teams"],
-        "requiredSkills": ["Brand strategy", "Market analysis", "Creativity"],
-        "category": "Marketing & Sales"
-      },
-      {
-        "jobTitle": "Social Media Manager",
-        "keyResponsibilities": ["Manage social media accounts", "Create and schedule posts", "Engage with online audiences"],
-        "requiredSkills": ["Social media platforms", "Content creation", "Analytics"],
-        "category": "Marketing & Sales"
-      },
-      {
-        "jobTitle": "Market Research Analyst",
-        "keyResponsibilities": ["Study market conditions", "Analyze data to identify trends", "Provide insights to improve strategies"],
-        "requiredSkills": ["Data analysis", "Survey tools", "Market trends"],
-        "category": "Marketing & Sales"
-      },
-      {
-        "jobTitle": "Public Relations Specialist",
-        "keyResponsibilities": ["Manage media relations", "Draft press releases", "Promote a positive public image"],
-        "requiredSkills": ["Communication", "Media relations", "Crisis management"],
-        "category": "Marketing & Sales"
-      },
-      {
-        "jobTitle": "Advertising Account Executive",
-        "keyResponsibilities": ["Coordinate between clients and creative teams", "Develop advertising campaigns", "Manage client relationships"],
-        "requiredSkills": ["Project management", "Communication", "Negotiation"],
-        "category": "Marketing & Sales"
-      },
-      {
-        "jobTitle": "E-commerce Manager",
-        "keyResponsibilities": ["Manage online retail operations", "Optimize user experience", "Analyze sales data for improvements"],
-        "requiredSkills": ["E-commerce platforms", "Analytics", "Customer behavior"],
-        "category": "Marketing & Sales"
-      },
-      {
-        "jobTitle": "Financial Analyst",
-        "keyResponsibilities": ["Analyze financial data", "Prepare reports and forecasts", "Provide investment recommendations"],
-        "requiredSkills": ["Financial modeling", "Excel proficiency", "Analytical skills"],
-        "category": "Finance"
-      },
-      {
-        "jobTitle": "Accountant",
-        "keyResponsibilities": ["Prepare and review financial records", "Ensure compliance with regulations", "Analyze financial operations"],
-        "requiredSkills": ["Accounting software", "Attention to detail", "Regulatory knowledge"],
-        "category": "Finance"
-      },
-      {
-        "jobTitle": "Auditor",
-        "keyResponsibilities": ["Examine financial statements", "Identify discrepancies", "Provide recommendations for improvements"],
-        "requiredSkills": ["Auditing techniques", "Risk assessment", "Analytical skills"],
-        "category": "Finance"
-      },
-      {
-        "jobTitle": "Tax Specialist",
-        "keyResponsibilities": ["Prepare tax returns", "Advise clients on tax strategies", "Ensure compliance with tax regulations"],
-        "requiredSkills": ["Tax laws", "Accounting knowledge", "Attention to detail"],
-        "category": "Finance"
-      },
-      {
-        "jobTitle": "Investment Banker",
-        "keyResponsibilities": ["Advise organizations on raising capital", "Conduct financial modeling", "Manage mergers and acquisitions"],
-        "requiredSkills": ["Financial analysis", "Negotiation", "Analytical thinking"],
-        "category": "Finance"
-      },
-      {
-        "jobTitle": "Personal Financial Advisor",
-        "keyResponsibilities": ["Advise clients on financial planning", "Manage investments", "Assist with retirement planning"],
-        "requiredSkills": ["Financial planning", "Interpersonal skills", "Analytical thinking"],
-        "category": "Finance"
-      },
-      {
-        "jobTitle": "Risk Manager",
-        "keyResponsibilities": ["Identify financial risks", "Develop risk management strategies", "Monitor compliance"],
-        "requiredSkills": ["Risk assessment", "Problem-solving", "Analytical skills"],
-        "category": "Finance"
-      },
-      {
-        "jobTitle": "Credit Analyst",
-        "keyResponsibilities": ["Assess creditworthiness of individuals or businesses", "Prepare credit reports", "Evaluate financial data"],
-        "requiredSkills": ["Credit analysis", "Attention to detail", "Financial modeling"],
-        "category": "Finance"
-      },
-      {
-        "jobTitle": "Budget Analyst",
-        "keyResponsibilities": ["Prepare and monitor budgets", "Evaluate financial resource allocation", "Provide financial insights to stakeholders"],
-        "requiredSkills": ["Budgeting", "Analytical skills", "Attention to detail"],
-        "category": "Finance"
-      },
-      {
-        "jobTitle": "Loan Officer",
-        "keyResponsibilities": ["Evaluate loan applications", "Assess creditworthiness", "Approve or recommend loans"],
-        "requiredSkills": ["Financial analysis", "Interpersonal skills", "Regulatory knowledge"],
-        "category": "Finance"
-      },
-      {
-        "jobTitle": "High School Teacher",
-        "keyResponsibilities": ["Teach students in specific subjects", "Prepare lesson plans", "Assess student progress"],
-        "requiredSkills": ["Subject knowledge", "Classroom management", "Communication"],
-        "category": "Education"
-      },
-      {
-        "jobTitle": "Instructional Designer",
-        "keyResponsibilities": ["Create educational materials", "Develop learning programs", "Evaluate training effectiveness"],
-        "requiredSkills": ["Instructional design tools", "Curriculum development", "Analytical skills"],
-        "category": "Education"
-      },
-      {
-        "jobTitle": "Librarian",
-        "keyResponsibilities": ["Manage library resources", "Assist users with research", "Organize and catalog materials"],
-        "requiredSkills": ["Research skills", "Organization", "Information systems"],
-        "category": "Education"
-      },
-      {
-        "jobTitle": "Academic Advisor",
-        "keyResponsibilities": ["Guide students in course selection", "Support academic planning", "Assist with career guidance"],
-        "requiredSkills": ["Interpersonal skills", "Advising experience", "Organization"],
-        "category": "Education"
-      },
-      {
-        "jobTitle": "Special Education Teacher",
-        "keyResponsibilities": ["Develop individualized education plans", "Support students with disabilities", "Collaborate with parents and specialists"],
-        "requiredSkills": ["Special education techniques", "Patience", "Empathy"],
-        "category": "Education"
-      },
-      {
-        "jobTitle": "College Professor",
-        "keyResponsibilities": ["Teach undergraduate or graduate courses", "Conduct research", "Advise students"],
-        "requiredSkills": ["Subject expertise", "Teaching experience", "Research skills"],
-        "category": "Education"
-      },
-      {
-        "jobTitle": "ESL Teacher",
-        "keyResponsibilities": ["Teach English to non-native speakers", "Develop language programs", "Assess student progress"],
-        "requiredSkills": ["Language teaching techniques", "Cultural sensitivity", "Communication"],
-        "category": "Education"
-      },
-      {
-        "jobTitle": "School Counselor",
-        "keyResponsibilities": ["Support students' academic and personal development", "Provide career guidance", "Work with parents and teachers"],
-        "requiredSkills": ["Counseling skills", "Empathy", "Communication"],
-        "category": "Education"
-      },
-      {
-        "jobTitle": "Curriculum Developer",
-        "keyResponsibilities": ["Design educational programs", "Evaluate curriculum effectiveness", "Collaborate with educators"],
-        "requiredSkills": ["Curriculum design", "Analytical skills", "Educational research"],
-        "category": "Education"
-      },
-      {
-        "jobTitle": "Educational Technology Specialist",
-        "keyResponsibilities": ["Implement technology in classrooms", "Train educators on tech tools", "Evaluate tech's impact on learning"],
-        "requiredSkills": ["Technology integration", "Training skills", "Educational tools knowledge"],
-        "category": "Education"
-      }
+      "title": "Marketing Manager",
+      "keyResponsibilities": ["Develop and oversee marketing strategies", "Analyze market trends", "Manage campaigns to promote products or services"],
+      "requiredSkills": ["Strategic planning", "Market analysis", "Leadership"],
+      "category": "Marketing & Sales"
+    },
+    {
+      "title": "Content Strategist",
+      "keyResponsibilities": ["Plan and create engaging content", "Align content with business goals", "Collaborate with creative teams"],
+      "requiredSkills": ["Content creation", "SEO knowledge", "Communication"],
+      "category": "Marketing & Sales"
+    },
+    {
+      "title": "Digital Marketing Specialist",
+      "keyResponsibilities": ["Execute digital campaigns", "Optimize content for SEO and SEM", "Monitor and analyze campaign performance"],
+      "requiredSkills": ["Digital advertising", "SEO/SEM", "Analytics tools (e.g., Google Analytics)"],
+      "category": "Marketing & Sales"
+    },
+    {
+      "title": "Sales Representative",
+      "keyResponsibilities": ["Build client relationships", "Meet sales targets", "Present products or services to customers"],
+      "requiredSkills": ["Communication", "Negotiation", "Customer relationship management"],
+      "category": "Marketing & Sales"
+    },
+    {
+      "title": "Brand Manager",
+      "keyResponsibilities": ["Develop and maintain brand identity", "Analyze brand performance", "Collaborate with marketing teams"],
+      "requiredSkills": ["Brand strategy", "Market analysis", "Creativity"],
+      "category": "Marketing & Sales"
+    },
+    {
+      "title": "Social Media Manager",
+      "keyResponsibilities": ["Manage social media accounts", "Create and schedule posts", "Engage with online audiences"],
+      "requiredSkills": ["Social media platforms", "Content creation", "Analytics"],
+      "category": "Marketing & Sales"
+    },
+    {
+      "title": "Market Research Analyst",
+      "keyResponsibilities": ["Study market conditions", "Analyze data to identify trends", "Provide insights to improve strategies"],
+      "requiredSkills": ["Data analysis", "Survey tools", "Market trends"],
+      "category": "Marketing & Sales"
+    },
+    {
+      "title": "Public Relations Specialist",
+      "keyResponsibilities": ["Manage media relations", "Draft press releases", "Promote a positive public image"],
+      "requiredSkills": ["Communication", "Media relations", "Crisis management"],
+      "category": "Marketing & Sales"
+    },
+    {
+      "title": "Advertising Account Executive",
+      "keyResponsibilities": ["Coordinate between clients and creative teams", "Develop advertising campaigns", "Manage client relationships"],
+      "requiredSkills": ["Project management", "Communication", "Negotiation"],
+      "category": "Marketing & Sales"
+    },
+    {
+      "title": "E-commerce Manager",
+      "keyResponsibilities": ["Manage online retail operations", "Optimize user experience", "Analyze sales data for improvements"],
+      "requiredSkills": ["E-commerce platforms", "Analytics", "Customer behavior"],
+      "category": "Marketing & Sales"
+    },
+    {
+      "title": "Financial Analyst",
+      "keyResponsibilities": ["Analyze financial data", "Prepare reports and forecasts", "Provide investment recommendations"],
+      "requiredSkills": ["Financial modeling", "Excel proficiency", "Analytical skills"],
+      "category": "Finance"
+    },
+    {
+      "title": "Accountant",
+      "keyResponsibilities": ["Prepare and review financial records", "Ensure compliance with regulations", "Analyze financial operations"],
+      "requiredSkills": ["Accounting software", "Attention to detail", "Regulatory knowledge"],
+      "category": "Finance"
+    },
+    {
+      "title": "Auditor",
+      "keyResponsibilities": ["Examine financial statements", "Identify discrepancies", "Provide recommendations for improvements"],
+      "requiredSkills": ["Auditing techniques", "Risk assessment", "Analytical skills"],
+      "category": "Finance"
+    },
+    {
+      "title": "Tax Specialist",
+      "keyResponsibilities": ["Prepare tax returns", "Advise clients on tax strategies", "Ensure compliance with tax regulations"],
+      "requiredSkills": ["Tax laws", "Accounting knowledge", "Attention to detail"],
+      "category": "Finance"
+    },
+    {
+      "title": "Investment Banker",
+      "keyResponsibilities": ["Advise organizations on raising capital", "Conduct financial modeling", "Manage mergers and acquisitions"],
+      "requiredSkills": ["Financial analysis", "Negotiation", "Analytical thinking"],
+      "category": "Finance"
+    },
+    {
+      "title": "Personal Financial Advisor",
+      "keyResponsibilities": ["Advise clients on financial planning", "Manage investments", "Assist with retirement planning"],
+      "requiredSkills": ["Financial planning", "Interpersonal skills", "Analytical thinking"],
+      "category": "Finance"
+    },
+    {
+      "title": "Risk Manager",
+      "keyResponsibilities": ["Identify financial risks", "Develop risk management strategies", "Monitor compliance"],
+      "requiredSkills": ["Risk assessment", "Problem-solving", "Analytical skills"],
+      "category": "Finance"
+    },
+    {
+      "title": "Credit Analyst",
+      "keyResponsibilities": ["Assess creditworthiness of individuals or businesses", "Prepare credit reports", "Evaluate financial data"],
+      "requiredSkills": ["Credit analysis", "Attention to detail", "Financial modeling"],
+      "category": "Finance"
+    },
+    {
+      "title": "Budget Analyst",
+      "keyResponsibilities": ["Prepare and monitor budgets", "Evaluate financial resource allocation", "Provide financial insights to stakeholders"],
+      "requiredSkills": ["Budgeting", "Analytical skills", "Attention to detail"],
+      "category": "Finance"
+    },
+    {
+      "title": "Loan Officer",
+      "keyResponsibilities": ["Evaluate loan applications", "Assess creditworthiness", "Approve or recommend loans"],
+      "requiredSkills": ["Financial analysis", "Interpersonal skills", "Regulatory knowledge"],
+      "category": "Finance"
+    },
+    {
+      "title": "High School Teacher",
+      "keyResponsibilities": ["Teach students in specific subjects", "Prepare lesson plans", "Assess student progress"],
+      "requiredSkills": ["Subject knowledge", "Classroom management", "Communication"],
+      "category": "Education"
+    },
+    {
+      "title": "Instructional Designer",
+      "keyResponsibilities": ["Create educational materials", "Develop learning programs", "Evaluate training effectiveness"],
+      "requiredSkills": ["Instructional design tools", "Curriculum development", "Analytical skills"],
+      "category": "Education"
+    },
+    {
+      "title": "Librarian",
+      "keyResponsibilities": ["Manage library resources", "Assist users with research", "Organize and catalog materials"],
+      "requiredSkills": ["Research skills", "Organization", "Information systems"],
+      "category": "Education"
+    },
+    {
+      "title": "Academic Advisor",
+      "keyResponsibilities": ["Guide students in course selection", "Support academic planning", "Assist with career guidance"],
+      "requiredSkills": ["Interpersonal skills", "Advising experience", "Organization"],
+      "category": "Education"
+    },
+    {
+      "title": "Special Education Teacher",
+      "keyResponsibilities": ["Develop individualized education plans", "Support students with disabilities", "Collaborate with parents and specialists"],
+      "requiredSkills": ["Special education techniques", "Patience", "Empathy"],
+      "category": "Education"
+    },
+    {
+      "title": "College Professor",
+      "keyResponsibilities": ["Teach undergraduate or graduate courses", "Conduct research", "Advise students"],
+      "requiredSkills": ["Subject expertise", "Teaching experience", "Research skills"],
+      "category": "Education"
+    },
+    {
+      "title": "ESL Teacher",
+      "keyResponsibilities": ["Teach English to non-native speakers", "Develop language programs", "Assess student progress"],
+      "requiredSkills": ["Language teaching techniques", "Cultural sensitivity", "Communication"],
+      "category": "Education"
+    },
+    {
+      "title": "School Counselor",
+      "keyResponsibilities": ["Support students' academic and personal development", "Provide career guidance", "Work with parents and teachers"],
+      "requiredSkills": ["Counseling skills", "Empathy", "Communication"],
+      "category": "Education"
+    },
+    {
+      "title": "Curriculum Developer",
+      "keyResponsibilities": ["Design educational programs", "Evaluate curriculum effectiveness", "Collaborate with educators"],
+      "requiredSkills": ["Curriculum design", "Analytical skills", "Educational research"],
+      "category": "Education"
+    },
+    {
+      "title": "Educational Technology Specialist",
+      "keyResponsibilities": ["Implement technology in classrooms", "Train educators on tech tools", "Evaluate tech's impact on learning"],
+      "requiredSkills": ["Technology integration", "Training skills", "Educational tools knowledge"],
+      "category": "Education"
+    }
   ]
