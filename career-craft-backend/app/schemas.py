@@ -1,155 +1,131 @@
-from pydantic import BaseModel, validator, EmailStr, Field
-from typing import Optional, List
+from pydantic import BaseModel, EmailStr
+from typing import Optional, List, Dict
 from datetime import datetime
-import json
-from fastapi import UploadFile
-from enum import Enum
-from typing import Dict, List, Any
 
-# Existing schemas
 class UserBase(BaseModel):
-    email: str
-
-class UserLogin(BaseModel):
     email: EmailStr
-    password: str
 
 class UserCreate(UserBase):
-    password: str
+    firebase_uid: str
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-    user_id: str
+class User(UserBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime]
 
-class TokenData(BaseModel):
-    email: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+class EducationBase(BaseModel):
+    institution: str
+    degree: str
+    field_of_study: str
+    start_date: Optional[datetime] = None  # Make optional
+    end_date: Optional[datetime] = None
+    gpa: Optional[str] = None
+
+class Education(EducationBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class ExperienceBase(BaseModel):
+    company: str
+    position: str
+    start_date: Optional[datetime] = None  # Make optional
+    end_date: Optional[datetime] = None
+    description: str = ""
+    highlights: List[str] = []
+
+class Experience(ExperienceBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class SkillBase(BaseModel):
+    name: str
+    category: str
+    proficiency_level: Optional[str]
+
+class Skill(SkillBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class ProjectBase(BaseModel):
+    title: str
+    description: str
+    technologies: List[str]
+    url: Optional[str]
+    start_date: Optional[datetime]
+    end_date: Optional[datetime]
+
+class Project(ProjectBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class AchievementBase(BaseModel):
+    title: str
+    description: str
+    date: Optional[datetime]
+
+class Achievement(AchievementBase):
+    id: int
+
+    class Config:
+        from_attributes = True
 
 class ResumeBase(BaseModel):
-    title: Optional[str] = "Untitled Resume"
-    content: str
-    
-    @validator('content')
-    def validate_json_content(cls, v):
-        try:
-            json.loads(v)
-            return v
-        except json.JSONDecodeError:
-            raise ValueError('Content must be valid JSON')
+    title: str
+    summary: str
+    contact_info: Dict[str, str]
+    target_job_description: Optional[str]
 
 class ResumeCreate(ResumeBase):
-    pass
+    education: List[EducationBase]
+    experience: List[ExperienceBase]
+    skills: List[SkillBase]
+    projects: Optional[List[ProjectBase]]
+    achievements: Optional[List[AchievementBase]]
+    target_job_description: str
 
-class ResumeResponse(ResumeBase):
+class Resume(ResumeBase):
     id: int
-    user_id: str
+    user_id: int
+    original_resume_url: Optional[str]
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime]
+    education: List[Education]
+    experience: List[Experience]
+    skills: List[Skill]
+    projects: List[Project]
+    achievements: List[Achievement]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-class PaginatedResponse(BaseModel):
-    items: List[ResumeResponse]
-    total: int
-    page: int
-    size: int
-
-# New schemas for resume generation
-class Experience(BaseModel):
+class JobRecommendation(BaseModel):
     title: str
-    company: str
-    start_date: str
-    end_date: Optional[str]
-    responsibilities: List[str]
+    key_responsibilities: List[str]
+    required_skills: List[str]
+    category: str
+    match_score: float
 
-class Education(BaseModel):
-    degree: str
-    field: str
-    school: str
-    graduation_date: str
+class ResumeFeedback(BaseModel):
+    overall_score: float
+    suggestions: List[str]
+    missing_skills: List[str]
+    improvement_areas: Dict[str, List[str]]
+    job_recommendations: List[JobRecommendation]
 
-class ResumeGenerationRequest(BaseModel):
-    #personal_info: Dict[str, str]
-    #summary: Optional[str] = None
-    #experience: List[Dict[str, Any]]
-    #education: List[Dict[str, Any]]
-    #skills: List[str]
-    #achievements: Optional[List[Dict[str, Any]]] = None
-    personal_info: dict = Field(..., description="Personal information including name, email, phone, location")
-    summary: str = Field(..., description="Professional summary")
-    experience: List[dict] = Field(..., description="List of work experiences")
-    education: List[dict] = Field(..., description="List of education entries")
-    skills: List[str] = Field(..., description="List of skills")
-    achievements: Optional[List[dict]] = Field(None, description="Optional list of achievements")
-
-class ResumeSource(str, Enum):
-    UPLOAD = "upload"
-    MANUAL = "manual"
-
-class ParsedResume(BaseModel):
-    full_name: Optional[str]
-    email: Optional[str]
-    phone: Optional[str]
-    location: Optional[str]
-    summary: Optional[str]
-    experience: Optional[List[Experience]]
-    education: Optional[List[Education]]
-    skills: Optional[List[str]]
+class ResumeResponse(BaseModel):
+    resume: Resume
+    feedback: Optional[ResumeFeedback]
     
     class Config:
-        orm_mode = True
-
-class ResumeUploadResponse(BaseModel):
-    message: str
-    parsed_data: ParsedResume
-    feedback: List[str] = []
-
-class KeywordAlignment(BaseModel):
-    missing_keywords: List[str]
-    suggestions: List[str]
-
-class AchievementImprovement(BaseModel):
-    section: str
-    current: str
-    suggested: str
-
-class SkillsFeedback(BaseModel):
-    relevant_skills: List[str]
-    missing_skills: List[str]
-    suggestions: List[str]
-
-class ResumeAnalysis(BaseModel):
-    keyword_alignment: KeywordAlignment
-    achievement_improvements: List[AchievementImprovement]
-    skills_feedback: SkillsFeedback
-    overall_recommendations: List[str]
-
-class Config:
-        schema_extra = {
-            "example": {
-                "personal_info": {
-                    "full_name": "John Doe",
-                    "email": "john@example.com",
-                    "phone": "123-456-7890",
-                    "location": "New York, NY"
-                },
-                "summary": "Experienced software engineer...",
-                "experience": [{
-                    "title": "Software Engineer",
-                    "company": "Tech Corp",
-                    "start_date": "2020-01",
-                    "end_date": "2023-01",
-                    "description": "Led development..."
-                }],
-                "education": [{
-                    "institution": "University Name",
-                    "degree": "Bachelor's in Computer Science",
-                    "graduation_date": "2020-05",
-                    "gpa": "3.8",
-                    "relevant_courses": []
-                }],
-                "skills": ["Python", "JavaScript", "React"],
-                "achievements": []
-            }
-        }
+        from_attributes = True
