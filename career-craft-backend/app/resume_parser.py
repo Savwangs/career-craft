@@ -1,139 +1,270 @@
-from typing import Dict, Any
+from typing import Dict, Optional
 import docx2txt
 import PyPDF2
 import re
 import spacy
-from pathlib import Path
-import logging
+from dateutil import parser as date_parser
+import os
+from .schemas import ResumeCreate
+from datetime import datetime
 
 class ResumeParser:
     def __init__(self):
-        # Load English language model
-        try:
-            self.nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            logging.warning("Downloading language model...")
-            import subprocess
-            subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
-            self.nlp = spacy.load("en_core_web_sm")
+        # Load SpaCy model for NER
+        self.nlp = spacy.load("en_core_web_sm")
+        
+        # Common section headers in resumes
+        self.sections = {
+            'education': r'education|academic|qualification',
+            'experience': r'experience|employment|work history|work experience',
+            'skills': r'skills|technical skills|competencies',
+            'projects': r'projects|personal projects',
+            'achievements': r'achievements|accomplishments|honors'
+        }
+    
+    def extract_text_from_pdf(self, file_path: str) -> str:
+        """Extract text content from PDF file."""
+        with open(file_path, 'rb') as file:
+            pdf_reader = PyPDF2.PdfReader(file)
+            text = ""
+            for page in pdf_reader.pages:
+                text += page.extract_text()
+        return text
 
     def extract_text_from_docx(self, file_path: str) -> str:
-        """Extract text from DOCX file."""
-        try:
-            text = docx2txt.process(file_path)
-            return text
-        except Exception as e:
-            logging.error(f"Error extracting text from DOCX: {e}")
-            raise ValueError("Failed to process DOCX file")
-
-    def extract_text_from_pdf(self, file_path: str) -> str:
-        """Extract text from PDF file."""
-        try:
-            with open(file_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                text = ""
-                for page in pdf_reader.pages:
-                    text += page.extract_text()
-                return text
-        except Exception as e:
-            logging.error(f"Error extracting text from PDF: {e}")
-            raise ValueError("Failed to process PDF file")
+        """Extract text content from DOCX file."""
+        return docx2txt.process(file_path)
 
     def extract_contact_info(self, text: str) -> Dict[str, str]:
-        """Extract contact information using regex patterns."""
+        """Extract contact information using regex and SpaCy NER."""
+        doc = self.nlp(text[:1000])  # Process first 1000 chars for efficiency
+        
+        contact_info = {}
+        
+        # Extract email
         email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        phone_pattern = r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b'
+        email_match = re.search(email_pattern, text)
+        if email_match:
+            contact_info['email'] = email_match.group()
+
+        # Extract phone
+        phone_pattern = r'\b(?:\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b'
+        phone_match = re.search(phone_pattern, text)
+        if phone_match:
+            contact_info['phone'] = phone_match.group()
+
+        # Extract location using SpaCy NER
+        for ent in doc.ents:
+            if ent.label_ in ['GPE', 'LOC']:
+                contact_info['location'] = ent.text
+                break
+
+        return contact_info
+
+    def extract_education(self, text: str) -> list:
+        """Extract education information."""
+        education_section = self._extract_section(text, self.sections['education'])
+        if not education_section:
+            return []
+
+        education_list = []
+        # Split into entries based on common degree keywords
+        degree_patterns = r'(?:Bachelor|Master|PhD|B\.|M\.|Ph\.D|Associate)'
+        entries = re.split(degree_patterns, education_section)
         
-        email = re.search(email_pattern, text)
-        phone = re.search(phone_pattern, text)
+        for entry in entries[1:]:  # Skip first split as it's usually empty
+            try:
+                # Extract degree
+                degree_match = re.search(degree_patterns, entry)
+                degree = degree_match.group() if degree_match else ""
+                
+                # Extract institution
+                institution = ""
+                lines = entry.split('\n')
+                for line in lines:
+                    if re.search(r'University|College|Institute', line):
+                        institution = line.strip()
+                        break
+
+                # Extract dates
+                dates = self._extract_dates(entry)
+                
+                if degree and institution:
+                    education_list.append({
+                        "institution": institution,
+                        "degree": degree,
+                        "field_of_study": "",  # Would need more complex parsing
+                        "start_date": dates.get('start_date'),
+                        "end_date": dates.get('end_date'),
+                        "gpa": self._extract_gpa(entry)
+                    })
+            except Exception as e:
+                print(f"Error parsing education entry: {str(e)}")
+                continue
+
+        return education_list
+
+    def extract_experience(self, text: str) -> list:
+        """Extract work experience information."""
+        experience_section = self._extract_section(text, self.sections['experience'])
+        if not experience_section:
+            return []
+
+        experience_list = []
+        # Split into entries based on company/position patterns
+        entries = re.split(r'\n(?=[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s*(?:Ltd\.?|Inc\.?|Corp\.?)?)', experience_section)
         
-        # Get the first few lines for name
-        lines = text.split('\n')
-        potential_name = next((line.strip() for line in lines if line.strip() 
-                             and not re.search(email_pattern, line) 
-                             and not re.search(phone_pattern, line)), "")
+        for entry in entries:
+            try:
+                lines = entry.split('\n')
+                if not lines:
+                    continue
+
+                # Extract company and position
+                company = lines[0].strip()
+                position = lines[1].strip() if len(lines) > 1 else ""
+
+                # Extract dates
+                dates = self._extract_dates(entry)
+
+                # Extract description and highlights
+                description = ""
+                highlights = []
+                for line in lines[2:]:
+                    line = line.strip()
+                    if line.startswith(('•', '-', '●')):
+                        highlights.append(line.lstrip('•- ●'))
+                    else:
+                        description += line + " "
+
+                if company and position:
+                    experience_list.append({
+                        "company": company,
+                        "position": position,
+                        "start_date": dates.get('start_date'),
+                        "end_date": dates.get('end_date'),
+                        "description": description.strip(),
+                        "highlights": highlights
+                    })
+            except Exception as e:
+                print(f"Error parsing experience entry: {str(e)}")
+                continue
+
+        return experience_list
+
+    def extract_skills(self, text: str) -> list:
+        """Extract skills information."""
+        skills_section = self._extract_section(text, self.sections['skills'])
+        if not skills_section:
+            return []
+
+        skills_list = []
+        # Split by common delimiters
+        skills_text = re.sub(r'[•\-,|]', '\n', skills_section)
+        
+        for skill in skills_text.split('\n'):
+            skill = skill.strip()
+            if skill and len(skill) > 1:
+                skills_list.append({
+                    "name": skill,
+                    "category": "Technical",  # Default category
+                    "proficiency_level": None
+                })
+
+        return skills_list
+
+    def _extract_section(self, text: str, section_pattern: str) -> Optional[str]:
+        """Extract a section from the resume text."""
+        pattern = re.compile(section_pattern, re.IGNORECASE)
+        matches = list(pattern.finditer(text))
+        
+        if not matches:
+            return None
+
+        start_idx = matches[0].start()
+        
+        # Find the start of the next section
+        next_section_start = len(text)
+        for section_pattern in self.sections.values():
+            pattern = re.compile(section_pattern, re.IGNORECASE)
+            matches = list(pattern.finditer(text[start_idx + 1:]))
+            if matches:
+                next_start = start_idx + 1 + matches[0].start()
+                next_section_start = min(next_section_start, next_start)
+
+        return text[start_idx:next_section_start].strip()
+
+    def _extract_dates(self, text: str) -> Dict[str, Optional[datetime]]:
+        """Extract start and end dates from text."""
+
+        # Common date formats in resumes
+        date_patterns = [
+            r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|'
+            r'Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|'
+            r'Dec(?:ember)?)[,\s]+\d{4}',
+            r'\d{1,2}/\d{4}',
+            r'\d{4}'
+        ]
+    
+        dates = []
+        for pattern in date_patterns:
+            matches = re.finditer(pattern, text)
+            for match in matches:
+                try:
+                    date = date_parser.parse(match.group())
+                    dates.append(date)
+                except:
+                    continue
+
+        dates.sort()
+    
+        # If no dates found, use current date as default
+        if not dates:
+            default_date = datetime.now().replace(month=1, day=1)
+            return {
+                'start_date': default_date,
+                'end_date': None
+            }
 
         return {
-            "full_name": potential_name,
-            "email": email.group(0) if email else None,
-            "phone": phone.group(0) if phone else None,
-            "location": None  # Location extraction requires more complex logic
+            'start_date': dates[0],
+            'end_date': dates[-1] if len(dates) > 1 else None
         }
 
-    def extract_sections(self, text: str) -> Dict[str, Any]:
-        """Extract different sections of the resume."""
-        sections = {
-            "summary": "",
-            "experience": [],
-            "education": [],
-            "skills": []
-        }
-        
-        # Use NLP to identify sections
-        doc = self.nlp(text)
-        
-        current_section = None
-        current_content = []
-        
-        for line in text.split('\n'):
-            line = line.strip()
-            lower_line = line.lower()
-            
-            if any(keyword in lower_line for keyword in ['experience', 'work history']):
-                if current_section and current_content:
-                    sections[current_section] = ' '.join(current_content)
-                current_section = 'experience'
-                current_content = []
-                continue
-            elif any(keyword in lower_line for keyword in ['education', 'academic']):
-                if current_section and current_content:
-                    sections[current_section] = ' '.join(current_content)
-                current_section = 'education'
-                current_content = []
-                continue
-            elif any(keyword in lower_line for keyword in ['skills', 'technologies']):
-                if current_section and current_content:
-                    sections[current_section] = ' '.join(current_content)
-                current_section = 'skills'
-                current_content = []
-                continue
-            elif any(keyword in lower_line for keyword in ['summary', 'objective']):
-                if current_section and current_content:
-                    sections[current_section] = ' '.join(current_content)
-                current_section = 'summary'
-                current_content = []
-                continue
-                
-            if current_section and line:
-                current_content.append(line)
-        
-        # Add the last section if it exists
-        if current_section and current_content:
-            sections[current_section] = ' '.join(current_content)
-            
-        # Return sections even if some are empty
-        return sections
+    def _extract_gpa(self, text: str) -> Optional[str]:
+        """Extract GPA from text."""
+        gpa_pattern = r'GPA:\s*(\d+\.\d+)|(\d+\.\d+)\s*GPA'
+        match = re.search(gpa_pattern, text)
+        return match.group(1) if match else None
 
-    def parse(self, file_path: str, file_type: str) -> Dict[str, Any]:
-        """Main parsing function."""
-        if file_type == "application/pdf":
+    def parse_resume(self, file_path: str) -> ResumeCreate:
+        """Main method to parse resume file and return structured data."""
+        # Determine file type and extract text
+        file_extension = os.path.splitext(file_path)[1].lower()
+        if file_extension == '.pdf':
             text = self.extract_text_from_pdf(file_path)
-        elif file_type in ["application/docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
+        elif file_extension in ['.docx', '.doc']:
             text = self.extract_text_from_docx(file_path)
         else:
-            raise ValueError("Unsupported file type")
+            raise ValueError("Unsupported file format")
 
+        # Extract all components
         contact_info = self.extract_contact_info(text)
-        sections = self.extract_sections(text)
+        education = self.extract_education(text)
+        experience = self.extract_experience(text)
+        skills = self.extract_skills(text)
 
-        # Track missing sections
-        missing_sections = []
-        for section in ['education', 'experience', 'skills']:
-            if not sections[section]:
-                missing_sections.append(section)
+        # Create ResumeCreate object
+        resume_data = ResumeCreate(
+            title="Parsed Resume",
+            summary="",  # Summary would need more complex NLP
+            contact_info=contact_info,
+            target_job_description="",
+            education=education,
+            experience=experience,
+            skills=skills,
+            projects=[],  # Would need more complex parsing
+            achievements=[]  # Would need more complex parsing
+        )
 
-        return {
-            **contact_info,
-            **sections,
-            "missing_sections": missing_sections
-        }
+        return resume_data
