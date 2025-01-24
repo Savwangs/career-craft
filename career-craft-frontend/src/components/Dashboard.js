@@ -1,26 +1,109 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Link } from 'react-router-dom';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const Dashboard = () => {
-  const { user } = useAuth();
+export default function Dashboard() {
+  const [resumes, setResumes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { user, getToken } = useAuth();
+
+  const loadResumes = async () => {
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('No authentication token available');
+
+      const response = await fetch('/api/resumes', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch resumes');
+      }
+
+      const data = await response.json();
+      setResumes(data);
+    } catch (err) {
+      console.error('Error loading resumes:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      loadResumes();
+    }
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">Loading...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-4">
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Welcome {user.email}</h1>
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-gray-600 mb-4">No resumes found.</p>
-          <Link
-            to="/create-resume"
-            className="inline-block bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
-          >
-            Create your first resume!
-          </Link>
-        </div>
-      </div>
+    <div className="container mx-auto p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Resumes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {resumes.length === 0 ? (
+            <div className="text-center">
+              <p className="mb-4">You haven't created any resumes yet.</p>
+              <Link
+                to="/resume/new"
+                className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              >
+                Create Your First Resume
+              </Link>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {resumes.map(resume => (
+                <Link key={resume.id} to={`/resume/${resume.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold">{resume.title || 'Untitled Resume'}</h3>
+                      <p className="text-sm text-gray-500">
+                        Last updated: {new Date(resume.updated_at).toLocaleDateString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+              <Link
+                to="/resume/new"
+                className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+              >
+                <span className="text-gray-600">+ Create New Resume</span>
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default Dashboard;
+}
