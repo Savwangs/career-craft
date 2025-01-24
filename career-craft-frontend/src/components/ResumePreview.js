@@ -1,148 +1,240 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { apiService } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
-import { generateResume } from '../services/resumeService';
+import React from 'react';
+import { AlertCircle, Download, Edit2 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const ResumePreview = ({ resumeContent, setResumeContent, jobDescription }) => {
-    const [feedback, setFeedback] = useState(null);
-    const [recommendations, setRecommendations] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const { currentUser } = useAuth();
+export default function ResumePreview({ resumeData, feedback, recommendations, onDownload, onEdit }) {
+  if (!resumeData) return null;
 
-    useEffect(() => {
-        const generateResumePreview = async () => {
-            if (!resumeContent || !jobDescription) {
-                setError('Both resume and job description are required');
-                setLoading(false);
-                return;
-            }
-        
-            try {
-                setLoading(true);
-                setError(null);
-                const result = await generateResume({
-                    inputMethod: 'form',
-                    data: resumeContent,
-                    jobDescription: jobDescription
-                });
-                
-                setFeedback(result.feedback);
-                setRecommendations(result.recommendations);
-                
-                if (result.pdf) {
-                    const pdfBlob = new Blob(
-                        [Uint8Array.from(atob(result.pdf), c => c.charCodeAt(0))],
-                        { type: 'application/pdf' }
-                    );
-                    setResumeContent({
-                        contentType: 'application/pdf',
-                        content: URL.createObjectURL(pdfBlob)
-                    });
-                }
-            } catch (err) {
-                console.error('Resume generation error:', err);
-                setError(err.message || 'Failed to generate resume preview');
-                setFeedback(null);
-                setRecommendations(null);
-            } finally {
-                setLoading(false);
-            }
-        };
-    
-        generateResumePreview();
-    }, [resumeContent, jobDescription]);
-
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+  return (
+    <div className="space-y-6">
+      {/* Resume Preview */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Resume Preview</CardTitle>
+          <div className="space-x-2">
+            <button
+              onClick={onEdit}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <Edit2 className="h-4 w-4 mr-2" />
+              Edit
+            </button>
+            <button
+              onClick={onDownload}
+              className="inline-flex items-center px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Contact Information */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold">{resumeData.contact_info.name}</h2>
+            <div className="text-gray-600">
+              <p>{resumeData.contact_info.email} | {resumeData.contact_info.phone}</p>
+              <p>{resumeData.contact_info.location}</p>
             </div>
-        );
-    }
+          </div>
 
-    if (error) {
-        return (
-            <div className="p-4 text-red-500 bg-red-50 rounded-md">
-                {error}
+          {/* Summary */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-2">Professional Summary</h3>
+            <p className="text-gray-700">{resumeData.summary}</p>
+          </div>
+
+          {/* Experience */}
+          {resumeData.experience.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2">Experience</h3>
+              {resumeData.experience.map((exp, index) => (
+                <div key={index} className="mb-4">
+                  <div className="flex justify-between">
+                    <h4 className="font-medium">{exp.position}</h4>
+                    <span className="text-gray-600">
+                      {new Date(exp.start_date).toLocaleDateString()} - 
+                      {exp.end_date ? new Date(exp.end_date).toLocaleDateString() : 'Present'}
+                    </span>
+                  </div>
+                  <p className="text-gray-700">{exp.company}</p>
+                  <p className="mt-2">{exp.description}</p>
+                </div>
+              ))}
             </div>
-        );
-    }
+          )}
 
-    return (
-        <div className="space-y-6">
-            {/* Resume Preview Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Resume Preview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {resumeContent.contentType === 'application/pdf' ? (
-                        <iframe
-                            src={resumeContent.content}
-                            className="w-full h-[800px] border-0"
-                            title="Resume Preview"
-                        />
-                    ) : (
-                        <div className="prose max-w-none">
-                            {resumeContent}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+          {/* Education */}
+          {resumeData.education.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2">Education</h3>
+              {resumeData.education.map((edu, index) => (
+                <div key={index} className="mb-4">
+                  <div className="flex justify-between">
+                    <h4 className="font-medium">{edu.degree} in {edu.field_of_study}</h4>
+                    <span className="text-gray-600">
+                      {new Date(edu.start_date).toLocaleDateString()} - 
+                      {edu.end_date ? new Date(edu.end_date).toLocaleDateString() : 'Present'}
+                    </span>
+                  </div>
+                  <p className="text-gray-700">{edu.institution}</p>
+                  {edu.gpa && <p className="text-gray-600">GPA: {edu.gpa}</p>}
+                </div>
+              ))}
+            </div>
+          )}
 
-            {/* Feedback Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>AI Feedback</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        {feedback?.sections?.map((section, index) => (
-                            <div key={index} className="border-l-4 border-blue-500 pl-4">
-                                <h3 className="font-semibold text-lg">{section.title}</h3>
-                                <p className="text-gray-700">{section.feedback}</p>
-                            </div>
-                        ))}
+          {/* Skills */}
+          {resumeData.skills.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2">Skills</h3>
+              <div className="flex flex-wrap gap-2">
+                {resumeData.skills.map((skill, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700"
+                  >
+                    {skill.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Projects */}
+          {resumeData.projects?.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2">Projects</h3>
+              {resumeData.projects.map((project, index) => (
+                <div key={index} className="mb-4">
+                  <h4 className="font-medium">{project.title}</h4>
+                  <p className="text-gray-700">{project.description}</p>
+                  {project.technologies?.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {project.technologies.map((tech, techIndex) => (
+                        <span
+                          key={techIndex}
+                          className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-700"
+                        >
+                          {tech}
+                        </span>
+                      ))}
                     </div>
-                </CardContent>
-            </Card>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-            {/* Job Recommendations Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recommended Jobs</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-6">
-                        {recommendations?.jobs?.map((job, index) => (
-                            <div key={index} className="border-b last:border-b-0 pb-4">
-                                <h3 className="font-semibold text-xl text-blue-600">{job.title}</h3>
-                                <p className="text-gray-600 text-sm mt-1">Category: {job.category}</p>
-                                <div className="mt-3">
-                                    <h4 className="font-medium">Key Responsibilities:</h4>
-                                    <ul className="list-disc pl-5 mt-2">
-                                        {job.keyResponsibilities.map((resp, idx) => (
-                                            <li key={idx} className="text-gray-700">{resp}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                                <div className="mt-3">
-                                    <h4 className="font-medium">Required Skills:</h4>
-                                    <ul className="list-disc pl-5 mt-2">
-                                        {job.keySkills?.map((skill, idx) => (
-                                            <li key={idx} className="text-gray-700">{skill}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
+      {/* AI Feedback */}
+      {feedback && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Resume Analysis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Overall Score */}
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-medium">Overall Match Score:</span>
+                <span className="text-2xl font-bold text-indigo-600">
+                  {Math.round(feedback.overall_score * 100)}%
+                </span>
+              </div>
+
+              {/* Improvement Areas */}
+              {Object.entries(feedback.improvement_areas).map(([area, suggestions]) => (
+                <Alert key={area} variant="info">
+                  <AlertCircle className="h-4 w-4" />
+                  <div className="ml-2">
+                    <h4 className="font-medium">{area}</h4>
+                    <AlertDescription>
+                      <ul className="list-disc list-inside">
+                        {suggestions.map((suggestion, index) => (
+                          <li key={index}>{suggestion}</li>
                         ))}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    );
-};
+                      </ul>
+                    </AlertDescription>
+                  </div>
+                </Alert>
+              ))}
 
-export default ResumePreview;
+              {/* Missing Skills */}
+              {feedback.missing_skills.length > 0 && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <div className="ml-2">
+                    <h4 className="font-medium">Missing Skills</h4>
+                    <AlertDescription>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {feedback.missing_skills.map((skill, index) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-sm"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </AlertDescription>
+                  </div>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Job Recommendations */}
+      {recommendations?.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recommended Job Matches</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recommendations.map((job, index) => (
+                <div
+                  key={index}
+                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex justify-between items-start">
+                    <h4 className="text-lg font-medium">{job.title}</h4>
+                    <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm">
+                      {Math.round(job.match_score * 100)}% Match
+                    </span>
+                  </div>
+                  <p className="text-gray-600 mt-1">{job.category}</p>
+                  <div className="mt-2">
+                    <h5 className="font-medium">Key Responsibilities:</h5>
+                    <ul className="list-disc list-inside text-gray-700">
+                      {job.key_responsibilities.map((resp, respIndex) => (
+                        <li key={respIndex}>{resp}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="mt-2">
+                    <h5 className="font-medium">Required Skills:</h5>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {job.required_skills.map((skill, skillIndex) => (
+                        <span
+                          key={skillIndex}
+                          className="px-2 py-1 bg-gray-100 rounded-full text-sm"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
