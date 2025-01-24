@@ -1,516 +1,461 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-const ResumeInput = ({ onSubmit }) => {
-  // State for form/upload method selection
-  const [inputMethod, setInputMethod] = useState('form');
-  
-  // State for job description
-  const [jobDescription, setJobDescription] = useState('');
-  
-  // State for form data
-  const [formData, setFormData] = useState({
-    personalInfo: {
-      fullName: '',
-      email: '',
-      phone: '',
-      location: '',
-    },
-    summary: '',
-    experience: [{
-      title: '',
-      company: '',
-      startDate: '',
-      endDate: '',
-      description: '',
-      isCurrentPosition: false,
-    }],
-    education: [{
-      degree: '',
-      institution: '',
-      graduationDate: '',
-      gpa: '',
-      relevantCourses: [{
-        courseName: '',
-        skillsLearned: ''
-      }]
-    }],
-    skills: '',
-    achievements: [{
-      title: '',
-      description: '',
-      date: '',
-    }]
-  });
-  
-  // State for file upload
-  const [resumeFile, setResumeFile] = useState(null);
-  
-  // State for error messages
-  const [error, setError] = useState('');
+export default function ResumeInput({ resumeData, setResumeData }) {
 
-  const handleFormChange = (section, field, value, index = null, courseIndex = null) => {
-    setFormData(prev => {
-      if (courseIndex !== null) {
-        const newEducation = [...prev.education];
-        const newCourses = [...newEducation[index].relevantCourses];
-        newCourses[courseIndex] = { ...newCourses[courseIndex], [field]: value };
-        newEducation[index] = { ...newEducation[index], relevantCourses: newCourses };
-        return { ...prev, education: newEducation };
+  if (!resumeData) {
+    return <div>Loading...</div>;
+  }
+
+  const handleContactChange = (field, value) => {
+    setResumeData({
+      ...resumeData,
+      contact_info: {
+        ...resumeData.contact_info,
+        [field]: value
       }
-      
-      if (index !== null) {
-        const newSection = [...prev[section]];
-        newSection[index] = { ...newSection[index], [field]: value };
-        return { ...prev, [section]: newSection };
-      }
-      
-      if (section === 'personalInfo') {
-        return {
-          ...prev,
-          personalInfo: { ...prev.personalInfo, [field]: value }
-        };
-      }
-      
-      return { ...prev, [section]: value };
     });
   };
 
-  const addListItem = (section, educationIndex = null) => {
-    if (educationIndex !== null) {
-      setFormData(prev => {
-        const newEducation = [...prev.education];
-        newEducation[educationIndex] = {
-          ...newEducation[educationIndex],
-          relevantCourses: [...newEducation[educationIndex].relevantCourses, { courseName: '', skillsLearned: '' }]
-        };
-        return { ...prev, education: newEducation };
-      });
-      return;
-    }
-
-    const newItem = {
-      experience: { title: '', company: '', startDate: '', endDate: '', description: '', isCurrentPosition: false },
-      education: { degree: '', institution: '', graduationDate: '', gpa: '', relevantCourses: [{ courseName: '', skillsLearned: '' }] },
-      achievements: { title: '', description: '', date: '' }
-    }[section];
-
-    setFormData(prev => ({
-      ...prev,
-      [section]: [...prev[section], newItem]
-    }));
+  const addExperience = () => {
+    setResumeData({
+      ...resumeData,
+      experience: [
+        ...resumeData.experience,
+        {
+          company: '',
+          position: '',
+          start_date: '',
+          end_date: '',
+          description: '',
+          highlights: ['']
+        }
+      ]
+    });
   };
 
-  const removeListItem = (section, index, educationIndex = null, courseIndex = null) => {
-    if (courseIndex !== null) {
-      setFormData(prev => {
-        const newEducation = [...prev.education];
-        const newCourses = newEducation[educationIndex].relevantCourses.filter((_, i) => i !== courseIndex);
-        newEducation[educationIndex] = { ...newEducation[educationIndex], relevantCourses: newCourses };
-        return { ...prev, education: newEducation };
-      });
-      return;
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      [section]: prev[section].filter((_, i) => i !== index)
-    }));
+  const addEducation = () => {
+    setResumeData({
+      ...resumeData,
+      education: [
+        ...resumeData.education,
+        {
+          institution: '',
+          degree: '',
+          field_of_study: '',
+          start_date: '',
+          end_date: '',
+          gpa: ''
+        }
+      ]
+    });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (!jobDescription) {
-        setError('Please provide a job description');
-        return;
-    }
-
-    if (inputMethod === 'form') {
-        if (!formData || !formData.personalInfo || !formData.personalInfo.fullName) {
-            setError('Please provide your full name.');
-            return;
+  const addSkill = () => {
+    setResumeData({
+      ...resumeData,
+      skills: [
+        ...resumeData.skills,
+        {
+          name: '',
+          category: ''
         }
+      ]
+    });
+  };
 
-        if (!formData.experience || formData.experience.length === 0) {
-            setError('Please add at least one experience entry.');
-            return;
+  const addProject = () => {
+    setResumeData({
+      ...resumeData,
+      projects: [
+        ...resumeData.projects,
+        {
+          title: '',
+          description: '',
+          technologies: [],
+          url: ''
         }
-    }
+      ]
+    });
+  };
 
-    if (inputMethod === 'upload' && !resumeFile) {
-        setError('Please upload your resume.');
-        return;
-    }
-
-    try {
-        console.log('Submitting data:', {
-            inputMethod,
-            data: inputMethod === 'form' ? formData : resumeFile,
-            jobDescription
-        });
-
-        await onSubmit({
-            inputMethod,
-            data: inputMethod === 'form' ? formData : resumeFile,  // 🔄 Correct key is `data`
-            jobDescription
-        });
-    } catch (err) {
-        console.error('Resume submission error:', err);
-        setError(err.message || 'Failed to process resume');
-    }
+  const addAchievement = () => {
+    setResumeData({
+      ...resumeData,
+      achievements: [
+        ...resumeData.achievements,
+        {
+          title: '',
+          description: '',
+          date: ''
+        }
+      ]
+    });
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">Create Your Resume</h2>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Tabs */}
-        <div className="border-b border-gray-200">
-          <div className="flex space-x-4">
-            <button
-              type="button"
-              className={`py-2 px-4 ${inputMethod === 'form' 
-                ? 'border-b-2 border-blue-500 text-blue-600' 
-                : 'text-gray-500'}`}
-              onClick={() => setInputMethod('form')}
-            >
-              Fill Form
-            </button>
-            <button
-              type="button"
-              className={`py-2 px-4 ${inputMethod === 'upload' 
-                ? 'border-b-2 border-blue-500 text-blue-600' 
-                : 'text-gray-500'}`}
-              onClick={() => setInputMethod('upload')}
-            >
-              Upload Resume
-            </button>
-          </div>
-        </div>
-
-        {inputMethod === 'form' ? (
-          <div className="space-y-6">
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Personal Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Full Name"
-                  value={formData.personalInfo.fullName}
-                  onChange={(e) => handleFormChange('personalInfo', 'fullName', e.target.value)}
-                />
-                <input
-                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Email"
-                  type="email"
-                  value={formData.personalInfo.email}
-                  onChange={(e) => handleFormChange('personalInfo', 'email', e.target.value)}
-                />
-                <input
-                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Phone"
-                  value={formData.personalInfo.phone}
-                  onChange={(e) => handleFormChange('personalInfo', 'phone', e.target.value)}
-                />
-                <input
-                  className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Location"
-                  value={formData.personalInfo.location}
-                  onChange={(e) => handleFormChange('personalInfo', 'location', e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Professional Summary */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Professional Summary</h3>
-                <span className="text-sm text-gray-500">{formData.summary.length}/100 characters</span>
-              </div>
-              <textarea
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Write a brief professional summary..."
-                rows={4}
-                value={formData.summary}
-                onChange={(e) => handleFormChange('summary', null, e.target.value)}
-                maxLength={100}
-              />
-            </div>
-
-            {/* Experience Section */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Experience</h3>
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                  onClick={() => addListItem('experience')}
-                >
-                  Add Experience
-                </button>
-              </div>
-              {formData.experience.map((exp, index) => (
-                <div key={index} className="space-y-4 p-4 border rounded-lg">
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Job Title"
-                      value={exp.title}
-                      onChange={(e) => handleFormChange('experience', 'title', e.target.value, index)}
-                    />
-                    <input
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Company"
-                      value={exp.company}
-                      onChange={(e) => handleFormChange('experience', 'company', e.target.value, index)}
-                    />
-                    <div className="flex items-center space-x-2">
-                      <input
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                        type="date"
-                        value={exp.startDate}
-                        onChange={(e) => handleFormChange('experience', 'startDate', e.target.value, index)}
-                      />
-                      <span>to</span>
-                      <input
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                        type="date"
-                        value={exp.endDate}
-                        onChange={(e) => handleFormChange('experience', 'endDate', e.target.value, index)}
-                        disabled={exp.isCurrentPosition}
-                      />
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        className="mr-2"
-                        checked={exp.isCurrentPosition}
-                        onChange={(e) => handleFormChange('experience', 'isCurrentPosition', e.target.checked, index)}
-                      />
-                      <label>Current Position</label>
-                    </div>
-                  </div>
-                  <textarea
-                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Description of responsibilities and achievements..."
-                    rows={3}
-                    value={exp.description}
-                    onChange={(e) => handleFormChange('experience', 'description', e.target.value, index)}
-                  />
-                  {index > 0 && (
-                    <button
-                      type="button"
-                      className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                      onClick={() => removeListItem('experience', index)}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Education */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Education</h3>
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                  onClick={() => addListItem('education')}
-                >
-                  Add Education
-                </button>
-              </div>
-              {formData.education.map((edu, index) => (
-                <div key={index} className="space-y-4 p-4 border rounded-lg">
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Degree"
-                      value={edu.degree}
-                      onChange={(e) => handleFormChange('education', 'degree', e.target.value, index)}
-                    />
-                    <input
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Institution"
-                      value={edu.institution}
-                      onChange={(e) => handleFormChange('education', 'institution', e.target.value, index)}
-                    />
-                    <input
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Graduation Date"
-                      type="date"
-                      value={edu.graduationDate}
-                      onChange={(e) => handleFormChange('education', 'graduationDate', e.target.value, index)}
-                    />
-                    <input
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="GPA (optional)"
-                      value={edu.gpa}
-                      onChange={(e) => handleFormChange('education', 'gpa', e.target.value, index)}
-                    />
-                  </div>
-                  
-                  {/* Relevant Coursework Section */}
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h4 className="text-md font-medium">Relevant Coursework</h4>
-                      <button
-                        type="button"
-                        className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                        onClick={() => addListItem('education', index)}
-                      >
-                        Add Course
-                      </button>
-                    </div>
-                    {edu.relevantCourses.map((course, courseIndex) => (
-                      <div key={courseIndex} className="space-y-2 p-4 border rounded-lg bg-gray-50">
-                        <input
-                          className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                          placeholder="Course Name"
-                          value={course.courseName}
-                          onChange={(e) => handleFormChange('education', 'courseName', e.target.value, index, courseIndex)}
-                        />
-                        <textarea
-                          className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                          placeholder="Skills Learned in Course"
-                          rows={2}
-                          value={course.skillsLearned}
-                          onChange={(e) => handleFormChange('education', 'skillsLearned', e.target.value, index, courseIndex)}
-                        />
-                        {courseIndex > 0 && (
-                          <button
-                            type="button"
-                            className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                            onClick={() => removeListItem('education', null, index, courseIndex)}
-                          >
-                            Remove Course
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {index > 0 && (
-                    <button
-                      type="button"
-                      className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                      onClick={() => removeListItem('education', index)}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Skills */}
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium">Skills</h3>
-              <textarea
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="List your key skills (comma separated)..."
-                rows={3}
-                value={formData.skills}
-                onChange={(e) => handleFormChange('skills', null, e.target.value)}
-              />
-            </div>
-
-            {/* New Achievements Section */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Additional Accomplishments/Awards (Optional)</h3>
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                  onClick={() => addListItem('achievements')}
-                >
-                  Add Achievement
-                </button>
-              </div>
-              {formData.achievements.map((achievement, index) => (
-                <div key={index} className="space-y-4 p-4 border rounded-lg">
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Achievement Title"
-                      value={achievement.title}
-                      onChange={(e) => handleFormChange('achievements', 'title', e.target.value, index)}
-                    />
-                    <input
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                      type="date"
-                      value={achievement.date}
-                      onChange={(e) => handleFormChange('achievements', 'date', e.target.value, index)}
-                    />
-                  </div>
-                  <textarea
-                    className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Description of achievement..."
-                    rows={2}
-                    value={achievement.description}
-                    onChange={(e) => handleFormChange('achievements', 'description', e.target.value, index)}
-                  />
-                  <button
-                    type="button"
-                    className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                    onClick={() => removeListItem('achievements', index)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx"
-              onChange={(e) => setResumeFile(e.target.files[0])}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-            <p className="text-sm text-gray-500">
-              Supported formats: PDF, DOC, DOCX
-            </p>
-          </div>
-        )}
-
-        {/* Job Description */}
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Job Description</h3>
-          <textarea
-            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-            placeholder="Paste the job description you're targeting..."
-            rows={6}
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
+    <div className="space-y-8">
+      {/* Contact Information */}
+      <section>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Contact Information</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <input
+            type="text"
+            placeholder="Full Name"
+            value={resumeData.contact_info.name}
+            onChange={(e) => handleContactChange('name', e.target.value)}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            value={resumeData.contact_info.email}
+            onChange={(e) => handleContactChange('email', e.target.value)}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+          <input
+            type="tel"
+            placeholder="Phone"
+            value={resumeData.contact_info.phone}
+            onChange={(e) => handleContactChange('phone', e.target.value)}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
+          <input
+            type="text"
+            placeholder="Location"
+            value={resumeData.contact_info.location}
+            onChange={(e) => handleContactChange('location', e.target.value)}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />
         </div>
+      </section>
 
-        {/* Error Message */}
-        {error && (
-          <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-            {error}
+      {/* Summary */}
+      <section>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Professional Summary</h3>
+        <textarea
+          value={resumeData.summary}
+          onChange={(e) => setResumeData({ ...resumeData, summary: e.target.value })}
+          className="w-full h-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          placeholder="Write a brief professional summary..."
+        />
+      </section>
+
+      {/* Experience */}
+      <section>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Experience</h3>
+          <button
+            type="button"
+            onClick={addExperience}
+            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200"
+          >
+            <PlusIcon className="h-4 w-4 mr-1" />
+            Add Experience
+          </button>
+        </div>
+        {resumeData.experience.map((exp, index) => (
+          <div key={index} className="mb-6 p-4 border rounded-md">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <input
+                type="text"
+                placeholder="Company"
+                value={exp.company}
+                onChange={(e) => {
+                  const newExp = [...resumeData.experience];
+                  newExp[index].company = e.target.value;
+                  setResumeData({ ...resumeData, experience: newExp });
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              <input
+                type="text"
+                placeholder="Position"
+                value={exp.position}
+                onChange={(e) => {
+                  const newExp = [...resumeData.experience];
+                  newExp[index].position = e.target.value;
+                  setResumeData({ ...resumeData, experience: newExp });
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              <input
+                type="month"
+                placeholder="Start Date"
+                value={exp.start_date}
+                onChange={(e) => {
+                  const newExp = [...resumeData.experience];
+                  newExp[index].start_date = e.target.value;
+                  setResumeData({ ...resumeData, experience: newExp });
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              <input
+                type="month"
+                placeholder="End Date"
+                value={exp.end_date}
+                onChange={(e) => {
+                  const newExp = [...resumeData.experience];
+                  newExp[index].end_date = e.target.value;
+                  setResumeData({ ...resumeData, experience: newExp });
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+            </div>
+            <textarea
+              placeholder="Description"
+              value={exp.description}
+              onChange={(e) => {
+                const newExp = [...resumeData.experience];
+                newExp[index].description = e.target.value;
+                setResumeData({ ...resumeData, experience: newExp });
+              }}
+              className="mt-4 w-full h-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
           </div>
-        )}
+        ))}
+      </section>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          className="w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          Generate Resume
-        </button>
-      </form>
+      {/* Education */}
+      <section>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Education</h3>
+          <button
+            type="button"
+            onClick={addEducation}
+            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200"
+          >
+            <PlusIcon className="h-4 w-4 mr-1" />
+            Add Education
+          </button>
+        </div>
+        {resumeData.education.map((edu, index) => (
+          <div key={index} className="mb-6 p-4 border rounded-md">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <input
+                type="text"
+                placeholder="Institution"
+                value={edu.institution}
+                onChange={(e) => {
+                  const newEdu = [...resumeData.education];
+                  newEdu[index].institution = e.target.value;
+                  setResumeData({ ...resumeData, education: newEdu });
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              <input
+                type="text"
+                placeholder="Degree"
+                value={edu.degree}
+                onChange={(e) => {
+                  const newEdu = [...resumeData.education];
+                  newEdu[index].degree = e.target.value;
+                  setResumeData({ ...resumeData, education: newEdu });
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              <input
+                type="text"
+                placeholder="Field of Study"
+                value={edu.field_of_study}
+                onChange={(e) => {
+                  const newEdu = [...resumeData.education];
+                  newEdu[index].field_of_study = e.target.value;
+                  setResumeData({ ...resumeData, education: newEdu });
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              <input
+                type="text"
+                placeholder="GPA"
+                value={edu.gpa}
+                onChange={(e) => {
+                  const newEdu = [...resumeData.education];
+                  newEdu[index].gpa = e.target.value;
+                  setResumeData({ ...resumeData, education: newEdu });
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              <input
+                type="month"
+                placeholder="Start Date"
+                value={edu.start_date}
+                onChange={(e) => {
+                  const newEdu = [...resumeData.education];
+                  newEdu[index].start_date = e.target.value;
+                  setResumeData({ ...resumeData, education: newEdu });
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+              <input
+                type="month"
+                placeholder="End Date"
+                value={edu.end_date}
+                onChange={(e) => {
+                  const newEdu = [...resumeData.education];
+                  newEdu[index].end_date = e.target.value;
+                  setResumeData({ ...resumeData, education: newEdu });
+                }}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Skills */}
+      <section>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Skills</h3>
+          <button
+            type="button"
+            onClick={addSkill}
+            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200"
+          >
+            <PlusIcon className="h-4 w-4 mr-1" />
+            Add Skill
+          </button>
+        </div>
+        {resumeData.skills.map((skill, index) => (
+          <div key={index} className="mb-4 flex gap-4">
+            <input
+              type="text"
+              placeholder="Skill"
+              value={skill.name}
+              onChange={(e) => {
+                const newSkills = [...resumeData.skills];
+                newSkills[index].name = e.target.value;
+                setResumeData({ ...resumeData, skills: newSkills });
+              }}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+            <input
+              type="text"
+              placeholder="Category"
+              value={skill.category}
+              onChange={(e) => {
+                const newSkills = [...resumeData.skills];
+                newSkills[index].category = e.target.value;
+                setResumeData({ ...resumeData, skills: newSkills });
+              }}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+          </div>
+        ))}
+      </section>
+
+      {/* Projects */}
+      <section>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Projects</h3>
+          <button
+            type="button"
+            onClick={addProject}
+            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200"
+          >
+            <PlusIcon className="h-4 w-4 mr-1" />
+            Add Project
+          </button>
+        </div>
+        {resumeData.projects.map((project, index) => (
+          <div key={index} className="mb-4 p-4 border rounded-md">
+            <input
+              type="text"
+              placeholder="Title"
+              value={project.title}
+              onChange={(e) => {
+                const newProjects = [...resumeData.projects];
+                newProjects[index].title = e.target.value;
+                setResumeData({ ...resumeData, projects: newProjects });
+              }}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mb-2"
+            />
+            <textarea
+              placeholder="Description"
+              value={project.description}
+              onChange={(e) => {
+                const newProjects = [...resumeData.projects];
+                newProjects[index].description = e.target.value;
+                setResumeData({ ...resumeData, projects: newProjects });
+              }}
+              className="w-full h-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mb-2"
+            />
+            <input
+              type="text"
+              placeholder="Technologies"
+              value={project.technologies.join(', ')}
+              onChange={(e) => {
+                const newProjects = [...resumeData.projects];
+                newProjects[index].technologies = e.target.value.split(',').map((tech) => tech.trim());
+                setResumeData({ ...resumeData, projects: newProjects });
+              }}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+            <input
+              type="text"
+              placeholder="URL"
+              value={project.url}
+              onChange={(e) => {
+                const newProjects = [...resumeData.projects];
+                newProjects[index].url = e.target.value;
+                setResumeData({ ...resumeData, projects: newProjects });
+              }}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+          </div>
+        ))}
+      </section>
+
+      {/* Achievements */}
+      <section>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Achievements</h3>
+          <button
+            type="button"
+            onClick={addAchievement}
+            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200"
+          >
+            <PlusIcon className="h-4 w-4 mr-1" />
+            Add Achievement
+          </button>
+        </div>
+        {resumeData.achievements.map((achievement, index) => (
+          <div key={index} className="mb-4 p-4 border rounded-md">
+            <input
+              type="text"
+              placeholder="Title"
+              value={achievement.title}
+              onChange={(e) => {
+                const newAchievements = [...resumeData.achievements];
+                newAchievements[index].title = e.target.value;
+                setResumeData({ ...resumeData, achievements: newAchievements });
+              }}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mb-2"
+            />
+            <textarea
+              placeholder="Description"
+              value={achievement.description}
+              onChange={(e) => {
+                const newAchievements = [...resumeData.achievements];
+                newAchievements[index].description = e.target.value;
+                setResumeData({ ...resumeData, achievements: newAchievements });
+              }}
+              className="w-full h-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mb-2"
+            />
+            <input
+              type="date"
+              placeholder="Date"
+              value={achievement.date}
+              onChange={(e) => {
+                const newAchievements = [...resumeData.achievements];
+                newAchievements[index].date = e.target.value;
+                setResumeData({ ...resumeData, achievements: newAchievements });
+              }}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+          </div>
+        ))}
+      </section>
     </div>
   );
-};
-
-export default ResumeInput;
+}
