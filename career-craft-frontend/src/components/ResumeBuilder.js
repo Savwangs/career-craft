@@ -55,6 +55,8 @@ export default function ResumeBuilder() {
     try {
       setLoading(true);
       const response = await resumeService.uploadResume(file, jobDescription);
+
+      response.created_manually = false;
       
       // Automatically fetch feedback and recommendations
       const feedbackData = await resumeService.analyzeResume(response.id, jobDescription);
@@ -64,7 +66,7 @@ export default function ResumeBuilder() {
       setFeedback(feedbackData);
       setRecommendations(recommendationsData);
       
-      // Switch to preview step
+      // Skip preview step, directly show feedback and recommendations
       setActiveStep('preview');
       
       toast.success('Resume uploaded and analyzed successfully');
@@ -80,6 +82,7 @@ export default function ResumeBuilder() {
       setLoading(true);
       const data = {
         ...resumeData,
+        created_manually: true,
         title: resumeData.title || 'My Resume',
         summary: resumeData.summary || '',
         target_job_description: jobDescription,
@@ -140,19 +143,31 @@ export default function ResumeBuilder() {
         toast.success('Resume created successfully');
       }
 
-      if (jobDescription && response.id) {
+      if (response.id) {
         try {
-          const feedbackData = await resumeService.analyzeResume(response.id, jobDescription);
+          const [feedbackData, recommendationsData] = await Promise.all([
+            resumeService.analyzeResume(response.id, jobDescription),
+            resumeService.getJobRecommendations(response.id)
+          ]);
+
+          response.created_manually = true;
+          response.is_uploaded_resume = false;
+  
           setFeedback(feedbackData);
-          
-          const recommendationsData = await resumeService.getJobRecommendations(response.id);
           setRecommendations(recommendationsData);
+          setResumeData(response);
+          setActiveStep('preview'); // Ensure this is called here
         } catch (error) {
-          console.error('Error getting resume feedback:', error);
+          console.error('Error getting resume feedback and recommendations:', error);
+          response.created_manually = true;
+          response.is_uploaded_resume = false;
+          setResumeData(response);
+          setActiveStep('preview');
+          toast.error('Unable to generate resume analysis');
+          // Still set to preview to show the resume content
         }
       }
-
-      setActiveStep('preview');
+  
     } catch (error) {
       toast.error(error.message || 'Failed to save resume');
     } finally {
