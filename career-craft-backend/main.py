@@ -31,7 +31,7 @@ firebase_admin.initialize_app(cred, {
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Resume Builder API")
+app = FastAPI(title="Career Craft API")
 
 # Configure CORS
 app.add_middleware(
@@ -82,40 +82,40 @@ async def upload_resume(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Job description is required"
         )
-        
+
     allowed_types = {
         "application/pdf": ".pdf",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx"
     }
-    
+
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only PDF and DOCX files are supported"
         )
-    
+
     try:
         # Create temp directory if it doesn't exist
         os.makedirs("temp", exist_ok=True)
-        
+
         # Save uploaded file with correct extension
         file_extension = allowed_types[file.content_type]
         temp_path = f"temp/upload_{datetime.now().timestamp()}{file_extension}"
-        
+
         with open(temp_path, "wb") as buffer:
             content = await file.read()
             buffer.write(content)
-        
+
         # Parse resume
         resume_data = resume_parser.parse_resume(temp_path)
-        
-        # Create resume in database with explicit relationship handling
+
+        # Create a new Resume object
         db_resume = models.Resume(
             user_id=current_user.id,
-            title=resume_data.title,
+            title=resume_data.title or "Uploaded Resume",
             summary=resume_data.summary,
             contact_info=resume_data.contact_info,
-            target_job_description=job_description or resume_data.target_job_description,
+            target_job_description=job_description,
             education=[
                 models.Education(
                     institution=edu.institution,
@@ -124,7 +124,7 @@ async def upload_resume(
                     start_date=edu.start_date,
                     end_date=edu.end_date,
                     gpa=edu.gpa
-                ) for edu in resume_data.education
+                ) for edu in resume_data.education or []
             ],
             experience=[
                 models.Experience(
@@ -134,14 +134,14 @@ async def upload_resume(
                     end_date=exp.end_date,
                     description=exp.description,
                     highlights=exp.highlights
-                ) for exp in resume_data.experience
+                ) for exp in resume_data.experience or []
             ],
             skills=[
                 models.Skill(
                     name=skill.name,
                     category=skill.category,
                     proficiency_level=skill.proficiency_level
-                ) for skill in resume_data.skills
+                ) for skill in resume_data.skills or []
             ],
             projects=[
                 models.Project(
@@ -151,26 +151,29 @@ async def upload_resume(
                     url=proj.url,
                     start_date=proj.start_date,
                     end_date=proj.end_date
-                ) for proj in (resume_data.projects or [])
+                ) for proj in resume_data.projects or []
             ],
             achievements=[
                 models.Achievement(
                     title=ach.title,
                     description=ach.description,
                     date=ach.date
-                ) for ach in (resume_data.achievements or [])
-            ]
+                ) for ach in resume_data.achievements or []
+            ],
+            resume_type="Parsed Resume",
+            updated_at=datetime.now()
         )
-        
+
+        # Save to database
         db.add(db_resume)
         db.commit()
         db.refresh(db_resume)
-        
+
         # Clean up temp file
         os.unlink(temp_path)
-        
+
         return db_resume
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -191,13 +194,35 @@ async def create_resume(
         )
     
     try:
-        # Add user ID
-        db_resume = models.Resume(**resume.dict(), user_id=current_user.id)
+        # Convert Pydantic model to dictionary and remove _sa_instance_state if present
+        resume_dict = resume.dict()
+        
+        # Create database models for related entities
+        db_education = [models.Education(**edu) for edu in resume_dict.pop('education', [])]
+        db_experience = [models.Experience(**exp) for exp in resume_dict.pop('experience', [])]
+        db_skills = [models.Skill(**skill) for skill in resume_dict.pop('skills', [])]
+        db_projects = [models.Project(**proj) for proj in resume_dict.pop('projects', [])]
+        db_achievements = [models.Achievement(**ach) for ach in resume_dict.pop('achievements', [])]
+        
+        # Create resume with user ID and other details
+        db_resume = models.Resume(
+            **resume_dict, 
+            user_id=current_user.id, 
+            resume_type="My Resume",
+            updated_at=datetime.now(),
+            education=db_education,
+            experience=db_experience,
+            skills=db_skills,
+            projects=db_projects,
+            achievements=db_achievements
+        )
+        
         db.add(db_resume)
         db.commit()
         db.refresh(db_resume)
         return db_resume
     except Exception as e:
+        db.rollback()  # Rollback in case of error
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
