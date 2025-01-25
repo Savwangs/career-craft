@@ -1,130 +1,188 @@
-import { authService } from './auth';
-import { auth } from '../firebase';
+import { getAuthToken } from './auth';
 
-const transformFormData = (formData) => {
-  // Transform personal info to match backend schema
-  const personal_info = {
-    full_name: formData.personalInfo.fullName,
-    email: formData.personalInfo.email,
-    phone: formData.personalInfo.phone,
-    location: formData.personalInfo.location
-  };
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-  // Transform experience data
-  const experience = formData.experience.map(exp => ({
-    title: exp.title,
-    company: exp.company,
-    start_date: exp.startDate,
-    end_date: exp.isCurrentPosition ? 'Present' : exp.endDate,
-    description: exp.description,
-    is_current: exp.isCurrentPosition
-  }));
-
-  // Transform education data
-  const education = formData.education.map(edu => ({
-    degree: edu.degree,
-    institution: edu.institution,
-    graduation_date: edu.graduationDate,
-    gpa: edu.gpa,
-    relevant_courses: edu.relevantCourses.map(course => ({
-      course_name: course.courseName,
-      skills_learned: course.skillsLearned
-    }))
-  }));
-
-  // Transform skills from string to array if needed
-  const skills = typeof formData.skills === 'string' 
-    ? formData.skills.split(',').map(skill => skill.trim())
-    : formData.skills;
-
-  // Transform achievements
-  const achievements = formData.achievements.map(achievement => ({
-    title: achievement.title,
-    description: achievement.description,
-    date: achievement.date
-  }));
-
-  return {
-    personal_info,
-    summary: formData.summary,
-    experience,
-    education,
-    skills,
-    achievements,
-    job_description: formData.jobDescription
-  };
+const handleResponse = async (response) => {
+  const contentType = response.headers.get("content-type");
+  if (!response.ok) {
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+      const error = await response.json();
+      throw new Error(error.detail || 'An error occurred');
+    } else {
+      const text = await response.text();
+      throw new Error(text || 'An error occurred');
+    }
+  }
+  
+  if (contentType && contentType.indexOf("application/json") !== -1) {
+    return response.json();
+  }
+  return response;
 };
 
-const handleFileUpload = async (file) => {
-  const formData = new FormData();
-  formData.append('resume', file);
-  return formData;
+const getHeaders = async (includeContentType = true) => {
+  const token = await getAuthToken();
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+  };
+  
+  if (includeContentType) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  return headers;
 };
 
-export const generateResume = async (data) => {
-  try {
-    if (!auth.currentUser) {
-      throw new Error('User not authenticated');
+export const resumeService = {
+  async getResumes() {
+    try {
+      const headers = await getHeaders();
+      const response = await fetch(`${API_URL}/api/resumes`, { headers });
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Get resumes error:', error);
+      throw error;
     }
-    
-    const token = await authService.getToken();
-    if (!token) {
-      throw new Error('No authentication token available');
+  },
+
+  async getResume(id) {
+    try {
+      const headers = await getHeaders();
+      const response = await fetch(`${API_URL}/api/resumes/${id}`, { headers });
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Get resume error:', error);
+      throw error;
     }
+  },
 
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-    
-    // Prepare request data based on input method
-    const requestData = data.inputMethod === 'form' 
-      ? transformFormData(data.data)
-      : await handleFileUpload(data.data);
-
-    // Add job description to form data if file upload
-    if (data.inputMethod === 'upload') {
-      requestData.append('job_description', data.jobDescription);
+  async createResume(data) {
+    try {
+      const headers = await getHeaders();
+      const response = await fetch(`${API_URL}/api/resumes`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ...data,
+          created_manually: true  // Explicitly set this flag
+        }),
+      });
+      const createdResume = await handleResponse(response);
+      
+      // Add these flags to ensure rendering
+      createdResume.created_manually = true;
+      createdResume.is_uploaded_resume = false;
+      
+      return createdResume;
+    } catch (error) {
+      console.error('Create resume error:', error);
+      throw error;
     }
+  },
 
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-    };
-
-    // Set appropriate Content-Type based on input method
-    if (data.inputMethod === 'form') {
-      headers['Content-Type'] = 'application/json';
+  async updateResume(id, data) {
+    try {
+      const headers = await getHeaders();
+      const response = await fetch(`${API_URL}/api/resumes/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data),
+      });
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Update resume error:', error);
+      throw error;
     }
-    // For FormData, browser will set the correct Content-Type with boundary
+  },
 
-    const response = await fetch(`${API_URL}/generate-resume`, {
-      method: 'POST',
-      headers,
-      body: data.inputMethod === 'form' 
-        ? JSON.stringify(requestData)
-        : requestData
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Server error response:', errorData);
-      throw new Error(errorData.detail || 'Failed to generate resume');
+  async deleteResume(id) {
+    try {
+      const headers = await getHeaders();
+      const response = await fetch(`${API_URL}/api/resumes/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Delete resume error:', error);
+      throw error;
     }
+  },
 
-    const responseData = await response.json();
-    
-    return {
-      pdf: responseData.pdf,
-      feedback: responseData.feedback || {
-        sections: [
-          {
-            title: "Resume Strength",
-            score: responseData.score || 0,
-            feedback: responseData.feedback_text || "Unable to generate detailed feedback."
-          }
-        ]
-      },
-      recommendations: responseData.job_recommendations || []
-    };
-  } catch (error) {
-    console.error('Error generating resume:', error);
-    throw error;
+  async analyzeResume(id, jobDescription) {
+    try {
+      const response = await fetch(`${API_URL}/api/resumes/${id}/analyze`, {
+        method: 'POST',
+        headers: await getHeaders(),
+        body: JSON.stringify({ job_description: jobDescription })
+      });
+      const data = await handleResponse(response);
+      console.log('Resume Analysis:', data);  // Add this line
+      return data;
+    } catch (error) {
+      console.error('Analyze resume error:', error);
+      throw error;
+    }
+  },
+
+  async generateResume(id) {
+    try {
+      const headers = await getHeaders();
+      const response = await fetch(`${API_URL}/api/resumes/${id}/generate`, {
+        headers,
+      });
+      return response.blob();
+    } catch (error) {
+      console.error('Generate resume error:', error);
+      throw error;
+    }
+  },
+
+  async uploadResume(file, jobDescription) {
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        // Add these flags
+        formData.append('created_manually', false);  // Important
+        formData.append('resume_type', 'Uploaded Resume');
+
+        if (jobDescription) {
+            formData.append('job_description', jobDescription);
+        }
+
+        const headers = await getHeaders(false); 
+        delete headers['Content-Type']; 
+        
+        const response = await fetch(`${API_URL}/api/resumes/upload`, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
+        
+        const uploadedResumeData = await handleResponse(response);
+        
+        return {
+            ...uploadedResumeData,
+            is_uploaded_resume: true // Explicitly mark as uploaded
+        };
+    } catch (error) {
+        console.error('Upload resume error:', error);
+        throw error;
+    }
+  },
+
+  async getJobRecommendations(resumeId) {
+    try {
+      const response = await fetch(`${API_URL}/api/jobs/recommendations?resume_id=${resumeId}`, { 
+        method: 'GET',
+        headers: await getHeaders() 
+      });
+      const data = await handleResponse(response);
+      console.log('Job Recommendations:', data);  // Add this line
+      return data;
+    } catch (error) {
+      console.error('Get job recommendations error:', error);
+      throw error;
+    }
   }
 };
