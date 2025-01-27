@@ -329,6 +329,7 @@ async def analyze_resume(
 @app.post("/api/resumes/{resume_id}/generate")
 async def generate_resume(
     resume_id: int,
+    job_description: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -349,7 +350,7 @@ async def generate_resume(
         output_path = f"temp/resume_{resume_id}_{datetime.now().timestamp()}.docx"
         os.makedirs("temp", exist_ok=True)
         
-        generated_path = resume_generator.generate(resume, output_path)
+        generated_path = resume_generator.generate(resume, job_description, output_path)
         
         # Return file
         return FileResponse(
