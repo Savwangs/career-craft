@@ -228,6 +228,16 @@ class ResumeAnalyzer:
         except Exception as e:
             print(f"Error getting job recommendations: {str(e)}")
             return []
+        
+        def _extract_additional_skills(self, resume: Resume) -> Set[str]:
+            """Extract additional skills from resume text."""
+            additional_skills = set()
+            for exp in resume.experience:
+                additional_skills.update(
+                    skill.strip().lower() 
+                    for skill in re.findall(r'\b[A-Z][a-z]+\b', exp.description)
+                )
+            return additional_skills
 
     def _format_education(self, education_list: List) -> str:
         """Format education entries for GPT analysis."""
