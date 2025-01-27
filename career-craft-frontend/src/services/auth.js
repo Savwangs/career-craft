@@ -1,66 +1,75 @@
-import { auth } from '../firebase';
 import { 
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
-    signOut,
-    sendPasswordResetEmail,
-    setPersistence,
-    browserLocalPersistence
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut
 } from 'firebase/auth';
+import { auth } from '../firebase';
 
-export const authService = {
-  async login(email, password) {
-    try {
-        // Set persistence first
-        await setPersistence(auth, browserLocalPersistence);
-        
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const token = await userCredential.user.getIdToken(true);
-        localStorage.setItem('token', token);
-        console.log("Login successful, token stored:", token);
-        return userCredential.user;
-    } catch (error) {
-        console.error("Login error:", error);
-        throw error;
-    }
-  },
-
-  async register(email, password) {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const token = await userCredential.user.getIdToken(true); // Force refresh
+export const login = async (email, password) => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const token = await userCredential.user.getIdToken();
     localStorage.setItem('token', token);
     return userCredential.user;
-  },
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
+};
 
-  async logout() {
-    try {
-      await signOut(auth);
-      localStorage.removeItem('token');
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw error;
-    }
-  },
+export const register = async (email, password) => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const token = await userCredential.user.getIdToken();
+    localStorage.setItem('token', token);
+    
+    // Create user in backend
+    const response = await fetch('/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        email: email,
+        firebase_uid: userCredential.user.uid
+      })
+    });
 
-  async resetPassword(email) {
-    await sendPasswordResetEmail(auth, email);
-  },
+    if (!response.ok) {
+      throw new Error('Failed to create user in backend');
+    }
 
-  async getToken() {
-    const currentUser = auth.currentUser;
-    console.log("Getting token for user:", currentUser?.email);
-    if (!currentUser) {
-        console.log('No current user found');
-        return null;
-    }
-    try {
-      const newToken = await currentUser.getIdToken(true);
-      console.log('New token generated:', newToken);
-      localStorage.setItem('token', newToken);
-      return newToken;
-    } catch (error) {
-      console.error('Error getting token:', error);
-      return null;
-    }
+    return userCredential.user;
+  } catch (error) {
+    console.error('Registration error:', error);
+    throw error;
+  }
+};
+
+export const logout = async () => {
+  try {
+    await signOut(auth);
+    localStorage.removeItem('token');
+  } catch (error) {
+    console.error('Logout error:', error);
+    throw error;
+  }
+};
+
+export const getAuthToken = async () => {
+  const user = auth.currentUser;
+  
+  if (!user) {
+    return null;
+  }
+
+  try {
+    const token = await user.getIdToken(true);
+    return token;
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
   }
 };
