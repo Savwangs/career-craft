@@ -1,9 +1,12 @@
-from typing import Optional
+from typing import Optional, List, Dict
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from datetime import datetime
 from .schemas import Resume
+import spacy
+from difflib import SequenceMatcher
+import re
 
 class ResumeGenerator:
     def __init__(self):
@@ -21,6 +24,10 @@ class ResumeGenerator:
         try:
             # Set up document
             self._setup_document()
+
+            if job_description:
+                job_skills = self._extract_job_skills(job_description)
+                resume = self._optimize_resume_for_job(resume, job_skills)
             
             # Add sections
             self._add_header(resume)
@@ -230,3 +237,102 @@ class ResumeGenerator:
         start_str = start_date.strftime('%B %Y')
         end_str = end_date.strftime('%B %Y') if end_date else 'Present'
         return f"{start_str} - {end_str}"
+
+class ResumeOptimizer:
+    def __init__(self):
+        # Load spaCy model for natural language processing
+        self.nlp = spacy.load('en_core_web_sm')
+
+    def optimize_resume(self, resume: Dict, job_description: str) -> Dict:
+        """Optimize resume content while preserving original structure"""
+        optimized_resume = resume.copy()
+
+        # Optimize summary
+        optimized_resume['summary'] = self._enhance_summary(
+            resume['summary'], 
+            job_description
+        )
+
+        # Optimize experience entries
+        optimized_resume['experience'] = [
+            self._enhance_experience_entry(exp, job_description) 
+            for exp in resume['experience']
+        ]
+
+        # Prioritize skills
+        optimized_resume['skills'] = self._prioritize_skills(
+            resume['skills'], 
+            job_description
+        )
+
+        return optimized_resume
+
+    def _enhance_summary(self, original_summary: str, job_description: str) -> str:
+        """Make summary more targeted and impactful"""
+        job_doc = self.nlp(job_description.lower())
+        summary_doc = self.nlp(original_summary.lower())
+
+        # Extract key job skills and requirements
+        job_keywords = [token.text for token in job_doc 
+                        if token.pos_ in ['NOUN', 'VERB'] 
+                        and len(token.text) > 3]
+
+        # Rewrite summary incorporating relevant keywords
+        enhanced_summary_parts = []
+        for sent in summary_doc.sents:
+            sent_text = sent.text
+            for keyword in job_keywords:
+                if keyword in sent_text.lower():
+                    sent_text = sent_text.replace(
+                        keyword, 
+                        f"**{keyword}**"  # Emphasize matching keywords
+                    )
+            enhanced_summary_parts.append(sent_text)
+
+        return " ".join(enhanced_summary_parts)
+
+    def _enhance_experience_entry(self, experience: Dict, job_description: str) -> Dict:
+        """Enhance experience description with more impactful language"""
+        original_desc = experience.get('description', '')
+        job_doc = self.nlp(job_description.lower())
+        desc_doc = self.nlp(original_desc.lower())
+
+        # Extract achievement-oriented verbs from job description
+        action_keywords = [
+            token.lemma_ for token in job_doc 
+            if token.pos_ == 'VERB' and token.lemma_ not in ['be', 'have', 'do']
+        ]
+
+        # Rewrite description using more powerful language
+        enhanced_desc_parts = []
+        for sent in desc_doc.sents:
+            sent_text = sent.text
+            for verb in action_keywords:
+                if verb in sent_text.lower():
+                    sent_text = sent_text.replace(
+                        verb, 
+                        f"**{verb.upper()}**"  # Emphasize powerful action verbs
+                    )
+            enhanced_desc_parts.append(sent_text)
+
+        experience_copy = experience.copy()
+        experience_copy['description'] = " ".join(enhanced_desc_parts)
+        return experience_copy
+
+    def _prioritize_skills(self, skills: List[Dict], job_description: str) -> List[Dict]:
+        """Reorder skills based on job description relevance"""
+        job_doc = self.nlp(job_description.lower())
+        
+        # Extract skills from job description
+        job_skills = [token.text for token in job_doc 
+                      if token.pos_ in ['NOUN'] 
+                      and len(token.text) > 3]
+
+        def skill_relevance(skill):
+            """Calculate skill relevance score"""
+            skill_name = skill['name'].lower()
+            matches = sum(1 for js in job_skills if js in skill_name)
+            return matches
+
+        # Sort skills by relevance to job description
+        return sorted(skills, key=skill_relevance, reverse=True)
