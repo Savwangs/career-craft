@@ -4,12 +4,13 @@ import { toast } from 'react-hot-toast';
 import { resumeService } from '../services/resumeService';
 import ResumeInput from './ResumeInput';
 import ResumePreview from './ResumePreview';
+import InitialChoiceStep from './InitialChoiceStep';
 
 export default function ResumeBuilder() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [activeStep, setActiveStep] = useState('form'); // 'form', 'preview'
+  const [activeStep, setActiveStep] = useState('choice'); // 'choice', 'upload', 'form', 'preview'
   const [resumeData, setResumeData] = useState({
     contact_info: {
       name: '',
@@ -31,6 +32,7 @@ export default function ResumeBuilder() {
   useEffect(() => {
     if (id && id !== 'new') {
       loadResume();
+      setActiveStep('form');
     }
   }, [id]);
 
@@ -55,18 +57,20 @@ export default function ResumeBuilder() {
     try {
       setLoading(true);
       const response = await resumeService.uploadResume(file, jobDescription);
-
+  
+      response.is_uploaded_resume = true;
       response.created_manually = false;
       
-      // Automatically fetch feedback and recommendations
-      const feedbackData = await resumeService.analyzeResume(response.id, jobDescription);
-      const recommendationsData = await resumeService.getJobRecommendations(response.id);
+      // Fetch feedback and recommendations
+      const [feedbackData, recommendationsData] = await Promise.all([
+        resumeService.analyzeResume(response.id, jobDescription),
+        resumeService.getJobRecommendations(response.id)
+      ]);
       
       setResumeData(response);
       setFeedback(feedbackData);
       setRecommendations(recommendationsData);
       
-      // Skip preview step, directly show feedback and recommendations
       setActiveStep('preview');
       
       toast.success('Resume uploaded and analyzed successfully');
@@ -83,6 +87,7 @@ export default function ResumeBuilder() {
       const data = {
         ...resumeData,
         created_manually: true,
+        is_uploaded_resume: false,
         title: resumeData.title || 'My Resume',
         summary: resumeData.summary || '',
         target_job_description: jobDescription,
@@ -149,22 +154,22 @@ export default function ResumeBuilder() {
             resumeService.analyzeResume(response.id, jobDescription),
             resumeService.getJobRecommendations(response.id)
           ]);
-
+  
           response.created_manually = true;
           response.is_uploaded_resume = false;
   
           setFeedback(feedbackData);
           setRecommendations(recommendationsData);
           setResumeData(response);
-          setActiveStep('preview'); // Ensure this is called here
+          setActiveStep('preview');
         } catch (error) {
           console.error('Error getting resume feedback and recommendations:', error);
+          
           response.created_manually = true;
           response.is_uploaded_resume = false;
           setResumeData(response);
           setActiveStep('preview');
           toast.error('Unable to generate resume analysis');
-          // Still set to preview to show the resume content
         }
       }
   
@@ -178,7 +183,15 @@ export default function ResumeBuilder() {
   const handleDownload = async () => {
     try {
       setLoading(true);
-      await resumeService.generateResume(resumeData.id);
+      const blob = await resumeService.generateResume(resumeData.id, jobDescription);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${resumeData.contact_info.name}_resume.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Resume downloaded successfully');
     } catch (error) {
       toast.error('Failed to download resume');
@@ -205,29 +218,49 @@ export default function ResumeBuilder() {
             >
               Cancel
             </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              {loading ? 'Saving...' : 'Save & Preview'}
-            </button>
+            {activeStep !== 'choice' && (
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                {loading ? 'Saving...' : 'Save & Preview'}
+              </button>
+            )}
           </div>
         </div>
 
-        {activeStep === 'form' ? (
+        {activeStep === 'choice' && (
+          <InitialChoiceStep 
+            onUploadClick={() => setActiveStep('upload')}
+            onCreateClick={() => setActiveStep('form')}
+          />
+        )}
+
+        {activeStep === 'upload' && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Upload Your Resume</h2>
+            <input
+              type="file"
+              accept=".pdf,.docx"
+              onChange={handleFileUpload}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+            />
+            <div className="mt-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Target Job Description</h2>
+              <textarea
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                className="w-full h-32 p-2 border rounded-md"
+                placeholder="Paste the job description here..."
+              />
+            </div>
+          </div>
+        )}
+
+        {activeStep === 'form' && (
           <div className="bg-white shadow rounded-lg">
             <div className="p-6">
-              <div className="mb-6">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Upload Existing Resume</h2>
-                <input
-                  type="file"
-                  accept=".pdf,.docx"
-                  onChange={handleFileUpload}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                />
-              </div>
-
               <div className="mb-6">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Target Job Description</h2>
                 <textarea
@@ -237,14 +270,15 @@ export default function ResumeBuilder() {
                   placeholder="Paste the job description here..."
                 />
               </div>
-
               <ResumeInput
                 resumeData={resumeData}
                 setResumeData={setResumeData}
               />
             </div>
           </div>
-        ) : (
+        )}
+
+        {activeStep === 'preview' && (
           <ResumePreview
             resumeData={resumeData}
             feedback={feedback}
