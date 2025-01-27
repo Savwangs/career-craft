@@ -238,33 +238,47 @@ class ResumeParser:
         return match.group(1) if match else None
 
     def parse_resume(self, file_path: str) -> ResumeCreate:
-        """Main method to parse resume file and return structured data."""
-        # Determine file type and extract text
-        file_extension = os.path.splitext(file_path)[1].lower()
-        if file_extension == '.pdf':
-            text = self.extract_text_from_pdf(file_path)
-        elif file_extension in ['.docx', '.doc']:
-            text = self.extract_text_from_docx(file_path)
-        else:
-            raise ValueError("Unsupported file format")
+        try:
+            """Main method to parse resume file and return structured data."""
+            # Determine file type and extract text
+            file_extension = os.path.splitext(file_path)[1].lower()
+            if file_extension == '.pdf':
+                text = self.extract_text_from_pdf(file_path)
+            elif file_extension in ['.docx', '.doc']:
+                text = self.extract_text_from_docx(file_path)
+            else:
+                raise ValueError("Unsupported file format")
 
-        # Extract all components
-        contact_info = self.extract_contact_info(text)
-        education = self.extract_education(text)
-        experience = self.extract_experience(text)
-        skills = self.extract_skills(text)
+            # Extract all components
+            contact_info = self.extract_contact_info(text)
+            education = self.extract_education(text)
+            experience = self.extract_experience(text)
+            skills = self.extract_skills(text)
 
-        # Create ResumeCreate object
-        resume_data = ResumeCreate(
-            title="Parsed Resume",
-            summary="",  # Summary would need more complex NLP
-            contact_info=contact_info,
-            target_job_description="",
-            education=education,
-            experience=experience,
-            skills=skills,
-            projects=[],  # Would need more complex parsing
-            achievements=[]  # Would need more complex parsing
-        )
+            # Create ResumeCreate object
+            resume_data = ResumeCreate(
+                title=f"Uploaded Resume - {os.path.basename(file_path)}",
+                summary=self._generate_summary(text),  # New method to generate summary
+                contact_info=contact_info,
+                created_manually=False,  # Mark as uploaded
+                is_uploaded_resume=True,
+                target_job_description="",
+                education=education,
+                experience=experience,
+                skills=skills,
+                projects=[],
+                achievements=[]
+            )
 
-        return resume_data
+            return resume_data
+        except ValueError as ve:
+            # Handle unsupported file formats
+            print(f"ValueError: {ve}")
+            raise
+
+    def _generate_summary(self, text: str) -> str:
+        """Generate a professional summary using extracted text."""
+        # Use NLP to create a concise summary
+        doc = self.nlp(text[:2000])  # Process first 2000 chars
+        summary_sentences = [sent.text for sent in doc.sents][:3]
+        return " ".join(summary_sentences)
