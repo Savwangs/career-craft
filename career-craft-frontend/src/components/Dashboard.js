@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { resumeService } from '../services/resumeService';
 
 export default function Dashboard() {
   const [resumes, setResumes] = useState([]);
@@ -14,17 +15,17 @@ export default function Dashboard() {
     try {
       const token = await getToken();
       if (!token) throw new Error('No authentication token available');
-
-      const response = await fetch('/api/resumes', {
+  
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/resumes`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to fetch resumes');
       }
-
+  
       const data = await response.json();
       setResumes(data);
     } catch (err) {
@@ -63,6 +64,17 @@ export default function Dashboard() {
     );
   }
 
+  const handleDeleteResume = async (resumeId) => {
+    try {
+      await resumeService.deleteResume(resumeId);
+      // Remove the deleted resume from the local state
+      setResumes(resumes.filter(resume => resume.id !== resumeId));
+    } catch (err) {
+      console.error('Delete resume error:', err);
+      setError('Failed to delete resume');
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <Card>
@@ -83,16 +95,27 @@ export default function Dashboard() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {resumes.map(resume => (
-                <Link key={resume.id} to={`/resume/${resume.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold">{resume.title || 'Untitled Resume'}</h3>
-                      <p className="text-sm text-gray-500">
-                        Last updated: {new Date(resume.updated_at).toLocaleDateString()}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <div key={resume.id} className="relative">
+                  <Link to={`/resume/${resume.id}`}>
+                    <Card className="hover:shadow-lg transition-shadow">
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold">{resume.title || 'Untitled Resume'}</h3>
+                        <p className="text-sm text-gray-500">
+                          Last updated: {new Date(resume.updated_at).toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent navigation
+                      handleDeleteResume(resume.id);
+                    }}
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-700 z-10"
+                  >
+                    🗑️
+                  </button>
+                </div>
               ))}
               <Link
                 to="/resume/new"
