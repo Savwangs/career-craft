@@ -1,41 +1,99 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';  // Use getAuth for consistency
-import { authService } from '../services/auth';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from 'firebase/auth';
+import { auth } from '../firebase';
 
 const AuthContext = createContext({});
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const auth = getAuth();  // Initialize Firebase Auth
-
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUser(user);  // Store user directly
-      } else {
-        setUser(null);
-      }
+      setUser(user);
       setLoading(false);
     });
 
     return unsubscribe;
-  }, []);
+  }, [auth]);
+
+  const login = async (email, password) => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
+      localStorage.setItem('token', idToken);
+      return userCredential.user;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+  const register = async (email, password) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const idToken = await userCredential.user.getIdToken();
+      localStorage.setItem('token', idToken);
+      
+      // Create user in backend
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          email: email,
+          firebase_uid: userCredential.user.uid
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create user in backend');
+      }
+
+      return userCredential.user;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+  };
 
   const logout = async () => {
     try {
-      await authService.logout();
-      setUser(null);
+      await signOut(auth);
+      localStorage.removeItem('token');
     } catch (error) {
       console.error('Logout error:', error);
+      throw error;
+    }
+  };
+
+  const getToken = async () => {
+    if (!user) return null;
+    try {
+      const token = await user.getIdToken(true);
+      localStorage.setItem('token', token);
+      return token;
+    } catch (error) {
+      console.error('Error getting token:', error);
+      return null;
     }
   };
 
   const value = {
     user,
     loading,
+    login,
+    register,
     logout,
+    getToken
   };
 
   return (
@@ -43,12 +101,8 @@ export const AuthProvider = ({ children }) => {
       {!loading && children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export function useAuth() {
+  return useContext(AuthContext);
+}
