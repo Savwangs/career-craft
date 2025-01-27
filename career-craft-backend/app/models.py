@@ -26,6 +26,7 @@ class Resume(Base):
     original_resume_url = Column(String, nullable=True)  # For uploaded resumes
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    resume_type = Column(String, default="My Resume")
     
     user = relationship("User", back_populates="resumes")
     education = relationship("Education", back_populates="resume")
