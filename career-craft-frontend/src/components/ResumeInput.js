@@ -93,6 +93,31 @@ export default function ResumeInput({ resumeData, setResumeData }) {
     });
   };
 
+  const handleDeleteExperience = (indexToRemove) => {
+    const updatedExperience = resumeData.experience.filter((_, index) => index !== indexToRemove);
+    setResumeData({ ...resumeData, experience: updatedExperience });
+  };
+
+  const handleDeleteEducation = (indexToRemove) => {
+    const updatedEducation = resumeData.education.filter((_, index) => index !== indexToRemove);
+    setResumeData({ ...resumeData, education: updatedEducation });
+  };
+
+  const handleDeleteSkill = (indexToRemove) => {
+    const updatedSkills = resumeData.skills.filter((_, index) => index !== indexToRemove);
+    setResumeData({ ...resumeData, skills: updatedSkills });
+  };
+
+  const handleDeleteProject = (indexToRemove) => {
+    const updatedProjects = resumeData.projects.filter((_, index) => index !== indexToRemove);
+    setResumeData({ ...resumeData, projects: updatedProjects });
+  };
+
+  const handleDeleteAchievement = (indexToRemove) => {
+    const updatedAchievements = resumeData.achievements.filter((_, index) => index !== indexToRemove);
+    setResumeData({ ...resumeData, achievements: updatedAchievements });
+  };
+
   return (
     <div className="space-y-8">
       {/* Contact Information */}
@@ -156,6 +181,16 @@ export default function ResumeInput({ resumeData, setResumeData }) {
         </div>
         {resumeData.experience.map((exp, index) => (
           <div key={index} className="mb-6 p-4 border rounded-md">
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => handleDeleteExperience(index)}
+                className="inline-flex items-center px-3 py-1 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100"
+                aria-label="Delete experience"
+              >
+                <XMarkIcon className="h-4 w-4 mr-1" />
+                Delete
+              </button>
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <input
                 type="text"
@@ -231,6 +266,16 @@ export default function ResumeInput({ resumeData, setResumeData }) {
         </div>
         {resumeData.education.map((edu, index) => (
           <div key={index} className="mb-6 p-4 border rounded-md">
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => handleDeleteEducation(index)}
+                className="inline-flex items-center px-3 py-1 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100"
+                aria-label="Delete education"
+              >
+                <XMarkIcon className="h-4 w-4 mr-1" />
+                Delete
+              </button>
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <input
                 type="text"
@@ -318,6 +363,16 @@ export default function ResumeInput({ resumeData, setResumeData }) {
         </div>
         {resumeData.skills.map((skill, index) => (
           <div key={index} className="mb-4 flex gap-4">
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => handleDeleteSkill(index)}
+                className="inline-flex items-center px-3 py-1 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100"
+                aria-label="Delete skill"
+              >
+                <XMarkIcon className="h-4 w-4 mr-1" />
+                Delete
+              </button>
+            </div>
             <input
               type="text"
               placeholder="Skill"
@@ -359,6 +414,16 @@ export default function ResumeInput({ resumeData, setResumeData }) {
         </div>
         {resumeData.projects.map((project, index) => (
           <div key={index} className="mb-4 p-4 border rounded-md">
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => handleDeleteProject(index)}
+                className="inline-flex items-center px-3 py-1 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100"
+                aria-label="Delete project"
+              >
+                <XMarkIcon className="h-4 w-4 mr-1" />
+                Delete
+              </button>
+            </div>
             <input
               type="text"
               placeholder="Title"
@@ -421,6 +486,16 @@ export default function ResumeInput({ resumeData, setResumeData }) {
         </div>
         {resumeData.achievements.map((achievement, index) => (
           <div key={index} className="mb-4 p-4 border rounded-md">
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => handleDeleteAchievement(index)}
+                className="inline-flex items-center px-3 py-1 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100"
+                aria-label="Delete achievement"
+              >
+                <XMarkIcon className="h-4 w-4 mr-1" />
+                Delete
+              </button>
+            </div>
             <input
               type="text"
               placeholder="Title"
