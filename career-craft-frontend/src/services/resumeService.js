@@ -64,16 +64,11 @@ export const resumeService = {
         headers,
         body: JSON.stringify({
           ...data,
-          created_manually: true  // Explicitly set this flag
+          created_manually: true,
+          is_uploaded_resume: false
         }),
       });
-      const createdResume = await handleResponse(response);
-      
-      // Add these flags to ensure rendering
-      createdResume.created_manually = true;
-      createdResume.is_uploaded_resume = false;
-      
-      return createdResume;
+      return handleResponse(response);
     } catch (error) {
       console.error('Create resume error:', error);
       throw error;
@@ -125,13 +120,15 @@ export const resumeService = {
     }
   },
 
-  async generateResume(id) {
+  async generateResume(id, jobDescription) {
     try {
       const headers = await getHeaders();
       const response = await fetch(`${API_URL}/api/resumes/${id}/generate`, {
+        method: 'POST', // Change to POST
         headers,
+        body: JSON.stringify({ job_description: jobDescription }) // Send job description
       });
-      return response.blob();
+      return await response.blob(); // Return blob for download
     } catch (error) {
       console.error('Generate resume error:', error);
       throw error;
@@ -140,34 +137,26 @@ export const resumeService = {
 
   async uploadResume(file, jobDescription) {
     try {
-        const formData = new FormData();
-        formData.append('file', file);
-        // Add these flags
-        formData.append('created_manually', false);  // Important
-        formData.append('resume_type', 'Uploaded Resume');
-
-        if (jobDescription) {
-            formData.append('job_description', jobDescription);
-        }
-
-        const headers = await getHeaders(false); 
-        delete headers['Content-Type']; 
-        
-        const response = await fetch(`${API_URL}/api/resumes/upload`, {
-            method: 'POST',
-            headers,
-            body: formData,
-        });
-        
-        const uploadedResumeData = await handleResponse(response);
-        
-        return {
-            ...uploadedResumeData,
-            is_uploaded_resume: true // Explicitly mark as uploaded
-        };
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('created_manually', false);
+      formData.append('is_uploaded_resume', true);
+      formData.append('resume_type', 'Uploaded Resume');
+      formData.append('job_description', jobDescription);
+  
+      const headers = await getHeaders(false); 
+      delete headers['Content-Type']; 
+      
+      const response = await fetch(`${API_URL}/api/resumes/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      
+      return handleResponse(response);
     } catch (error) {
-        console.error('Upload resume error:', error);
-        throw error;
+      console.error('Upload resume error:', error);
+      throw error;
     }
   },
 
